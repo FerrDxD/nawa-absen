@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+	:root {
+		--bg: #f8fafc;
+		--card: #ffffff;
+		--border: #e5e7eb;
+		--text-primary: #0f172a;
+		--text-secondary: #64748b;
+		--primary: #2563eb;
+		--primary-hover: #1d4ed8;
+		--soft-blue: #eff6ff;
+		--success: #10b981;
+		--danger: #ef4444;
+		--warning: #f59e0b;
+	}
+
+	body {
+		font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+	}
+
+	h1, h2, h3, h4, h5, h6 {
+		font-family: 'Poppins', sans-serif;
+		font-weight: 700;
+	}
+}
+
+.font-heading {
+	font-family: 'Poppins', sans-serif;
+	font-weight: 700;
+}
+
+/* Version 2.0 Shadow Rules */
+.shadow-v2 {
+	box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.dark .shadow-v2 {
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Card Hover Micro Interaction */
+.card-hover {
+	transition: transform 250ms ease, box-shadow 250ms ease;
+}
+
+.card-hover:hover {
+	transform: translateY(-4px);
+}
+
+/* Animated Scanning Line */
+@keyframes scanline {
+	0% {
+		top: 0%;
+		opacity: 0.8;
+	}
+	50% {
+		top: 95%;
+		opacity: 1;
+	}
+	100% {
+		top: 0%;
+		opacity: 0.8;
+	}
+}
+
+.animate-scanline {
+	animation: scanline 2.8s ease-in-out infinite;
+}
+
+/* Luxurious Drawer Slide Up (seperti laci yang ditarik mulus) */
+@keyframes drawerSlideUp {
+	0% {
+		transform: translateY(100%);
+		opacity: 0.5;
+	}
+	100% {
+		transform: translateY(0%);
+		opacity: 1;
+	}
+}
+
+.animate-drawer-up {
+	animation: drawerSlideUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes backdropFadeIn {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+.animate-backdrop-in {
+	animation: backdropFadeIn 0.3s ease-out forwards;
+}
+
+/* Soft Gradient Background */
+.bg-v2-gradient {
+	background: linear-gradient(180deg, #ffffff 0%, #eff6ff 50%, #ffffff 100%);
+}
+
+.dark .bg-v2-gradient {
+	background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
