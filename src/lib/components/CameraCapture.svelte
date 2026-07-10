@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 
 	// Deteksi perangkat low-end (RAM ≤2 GB atau CPU core ≤2)
 	let isLowEnd = false;
@@ -289,8 +289,11 @@
 		}
 	}
 
-	onMount(() => {
-		if (autoStart) startCamera();
+	// Reaktif terhadap perubahan autoStart — aktif saat izin diberikan dari modal
+	$effect(() => {
+		if (autoStart && !isCameraActive && !stream) {
+			startCamera();
+		}
 	});
 
 	onDestroy(() => {

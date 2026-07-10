@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 
 	let {
 		autoStart = false,
@@ -215,8 +215,11 @@
 		}, MAX_WAIT_MS);
 	}
 
-	onMount(() => {
-		if (autoStart) requestLocation();
+	// Reaktif terhadap perubahan autoStart — aktif saat izin diberikan dari modal
+	$effect(() => {
+		if (autoStart && !isLocating && userLat === null) {
+			requestLocation();
+		}
 	});
 
 	onDestroy(() => {
