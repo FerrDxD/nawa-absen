@@ -2,6 +2,7 @@
 	import CameraCapture from '$lib/components/CameraCapture.svelte';
 	import GeoStatus from '$lib/components/GeoStatus.svelte';
 	import SwipeToConfirm from '$lib/components/SwipeToConfirm.svelte';
+	import PermissionGuideModal from '$lib/components/PermissionGuideModal.svelte';
 
 	let { data } = $props();
 
@@ -17,6 +18,7 @@
 	let userGpsIntegrity = $state<any>(null);
 
 	// UI States
+	let permissionGranted = $state(false);
 	let isCrossCheckOpen = $state(false);
 	let isSubmitting = $state(false);
 	let submitError = $state<string | null>(null);
@@ -263,10 +265,11 @@
 				</div>
 
 				<!-- CARD 2: FACE RECOGNITION (PUSAT PERHATIAN) -->
-				<CameraCapture onPhotoTaken={handlePhotoTaken} />
+				<CameraCapture autoStart={permissionGranted} onPhotoTaken={handlePhotoTaken} />
 
 				<!-- CARD 3: VERIFIKASI LOKASI GPS -->
 				<GeoStatus
+					autoStart={permissionGranted}
 					initialConfig={data.schoolConfig}
 					onLocationObtained={handleLocationObtained}
 				/>
@@ -391,3 +394,6 @@
 		</div>
 	</div>
 {/if}
+
+<!-- MODAL PANDUAN IZIN — muncul pertama kali sebelum kamera & GPS aktif -->
+<PermissionGuideModal onPermissionGranted={() => (permissionGranted = true)} />

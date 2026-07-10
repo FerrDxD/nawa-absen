@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 
 	let {
+		autoStart = false,
 		initialConfig = null,
 		onLocationObtained = (
 			lat: number,
@@ -11,6 +12,7 @@
 			integrityToken?: any
 		) => {}
 	}: {
+		autoStart?: boolean;
 		initialConfig?: any;
 		onLocationObtained: (
 			lat: number,
@@ -214,7 +216,7 @@
 	}
 
 	onMount(() => {
-		requestLocation();
+		if (autoStart) requestLocation();
 	});
 
 	onDestroy(() => {

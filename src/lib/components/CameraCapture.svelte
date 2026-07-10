@@ -10,8 +10,10 @@
 	}
 
 	let {
+		autoStart = false,
 		onPhotoTaken = (base64: string) => {}
 	}: {
+		autoStart?: boolean;
 		onPhotoTaken: (base64: string) => void;
 	} = $props();
 
@@ -288,7 +290,7 @@
 	}
 
 	onMount(() => {
-		startCamera();
+		if (autoStart) startCamera();
 	});
 
 	onDestroy(() => {
