@@ -56,10 +56,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 6.0,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-15', // Hari 1
 		user_agent: 'Mozilla/5.0 (Mobile; Chrome/126.0)',
 		device_info: 'Android 14 - 360x800',
-		created_at: new Date(Date.now() - 3600 * 1000)
+		created_at: new Date('2026-07-15T06:45:00Z')
 	},
 	{
 		id: 102,
@@ -73,10 +73,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 7.0,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-15', // Hari 1
 		user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)',
 		device_info: 'iOS 17 - 390x844',
-		created_at: new Date(Date.now() - 3200 * 1000)
+		created_at: new Date('2026-07-15T06:50:00Z')
 	},
 	{
 		id: 103,
@@ -90,10 +90,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 8.5,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-16', // Hari 2
 		user_agent: 'Mozilla/5.0 (Mobile; Chrome/126.0)',
 		device_info: 'Android 13 - 360x800',
-		created_at: new Date(Date.now() - 2800 * 1000)
+		created_at: new Date('2026-07-16T06:40:00Z')
 	},
 	{
 		id: 104,
@@ -107,10 +107,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 9.0,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-16', // Hari 2
 		user_agent: 'Mozilla/5.0 (Mobile; Chrome/126.0)',
 		device_info: 'Android 14 - 412x915',
-		created_at: new Date(Date.now() - 2400 * 1000)
+		created_at: new Date('2026-07-16T06:55:00Z')
 	},
 	{
 		id: 105,
@@ -124,10 +124,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 10.0,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-17', // Hari 3
 		user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4)',
 		device_info: 'iOS 17.4 - 393x852',
-		created_at: new Date(Date.now() - 2000 * 1000)
+		created_at: new Date('2026-07-17T06:42:00Z')
 	},
 	{
 		id: 106,
@@ -141,10 +141,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 7.5,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-20', // Hari 4
 		user_agent: 'Mozilla/5.0 (Mobile; Chrome/126.0)',
 		device_info: 'Android 14 - 360x800',
-		created_at: new Date(Date.now() - 1600 * 1000)
+		created_at: new Date('2026-07-20T06:48:00Z')
 	},
 	{
 		id: 107,
@@ -158,10 +158,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 11.0,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: '2026-07-21', // Hari 5
 		user_agent: 'Mozilla/5.0 (Mobile; Chrome/126.0)',
 		device_info: 'Android 13 - 384x854',
-		created_at: new Date(Date.now() - 1200 * 1000)
+		created_at: new Date('2026-07-21T06:51:00Z')
 	},
 	{
 		id: 108,
@@ -175,10 +175,10 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 6.5,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0],
+		tanggal: new Date().toISOString().split('T')[0], // Hari Ini
 		user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6)',
 		device_info: 'iOS 16.6 - 375x812',
-		created_at: new Date(Date.now() - 600 * 1000)
+		created_at: new Date()
 	}
 ];
 
@@ -441,8 +441,12 @@ export async function getRekapAbsensi(filters?: {
 /**
  * Dapatkan Statistik Kehadiran (Total Hadir, Per Gugus, Kehadiran per Jam)
  */
-export async function getAbsensiStats() {
-	const all = await getRekapAbsensi();
+export async function getAbsensiStats(filters?: {
+	gugusId?: number;
+	tanggal?: string;
+	status?: string;
+}) {
+	const all = await getRekapAbsensi(filters);
 	const validRecords = all.filter((r) => r.status === 'valid');
 	const ditolakRecords = all.filter((r) => r.status !== 'valid');
 

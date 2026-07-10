@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	if (statusParam && statusParam !== 'all') filters.status = statusParam;
 
 	const records = await getRekapAbsensi(filters);
-	const stats = await getAbsensiStats();
+	const stats = await getAbsensiStats(filters);
 
 	return json({
 		success: true,

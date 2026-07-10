@@ -344,6 +344,48 @@
 				</div>
 			</div>
 
+			<!-- FILTER HARI PELAKSANAAN MPLS (5 HARI) — PILL SWITCHER -->
+			<div class="rounded-[24px] border border-[#E5E7EB] dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-v2">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+					<div class="flex items-center gap-2">
+						<div class="flex h-8 w-8 items-center justify-center rounded-xl bg-[#EFF6FF] dark:bg-blue-950 text-[#2563EB]">
+							<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+								<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+							</svg>
+						</div>
+						<div>
+							<p class="font-heading text-xs sm:text-sm font-bold text-[#0F172A] dark:text-white">
+								Sortir Berdasarkan Hari MPLS (5 Hari)
+							</p>
+							<p class="text-[11px] text-[#64748B]">
+								Filter KPI, Peta, Grafik, dan Tabel Absensi sesuai jadwal hari
+							</p>
+						</div>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-1.5">
+						{#each [
+							{ id: 'all', label: 'Semua Hari' },
+							{ id: '2026-07-15', label: 'Hari ke-1 (15 Jul)' },
+							{ id: '2026-07-16', label: 'Hari ke-2 (16 Jul)' },
+							{ id: '2026-07-17', label: 'Hari ke-3 (17 Jul)' },
+							{ id: '2026-07-20', label: 'Hari ke-4 (20 Jul)' },
+							{ id: '2026-07-21', label: 'Hari ke-5 (21 Jul)' }
+						] as hari}
+							<button
+								type="button"
+								onclick={() => { filterTanggal = hari.id; handleFilterChange(); }}
+								class="rounded-[14px] px-3.5 py-2 text-xs font-bold transition-all {filterTanggal === hari.id
+									? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 scale-[1.02]'
+									: 'bg-[#F8FAFC] dark:bg-slate-800/70 text-[#64748B] dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800'}"
+							>
+								{hari.label}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</div>
+
 			<!-- 3 KPI SUMMARY CARDS -->
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
 				<!-- KPI Card 1: Total -->
@@ -491,6 +533,20 @@
 							{#each gugusList as g}
 								<option value={g.id}>{g.nama_gugus}</option>
 							{/each}
+						</select>
+
+						<!-- Filter Hari / Tanggal -->
+						<select
+							bind:value={filterTanggal}
+							onchange={handleFilterChange}
+							class="rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-3.5 py-2 text-xs font-semibold text-[#0F172A] dark:text-white focus:outline-none"
+						>
+							<option value="all">Semua Hari</option>
+							<option value="2026-07-15">Hari ke-1 (15 Jul 2026)</option>
+							<option value="2026-07-16">Hari ke-2 (16 Jul 2026)</option>
+							<option value="2026-07-17">Hari ke-3 (17 Jul 2026)</option>
+							<option value="2026-07-20">Hari ke-4 (20 Jul 2026)</option>
+							<option value="2026-07-21">Hari ke-5 (21 Jul 2026)</option>
 						</select>
 
 						<!-- Filter Status -->
