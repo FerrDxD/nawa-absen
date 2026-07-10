@@ -28,20 +28,12 @@
 			}
 		}
 
-		// 2. Minta izin lokasi
-		await new Promise<void>((resolve) => {
-			navigator.geolocation.getCurrentPosition(
-				() => resolve(),
-				() => resolve(),
-				{ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-			);
-		});
-
+		// 2. Minta izin lokasi — satu panggilan, resolves true/false
 		const locationGranted = await new Promise<boolean>((resolve) => {
 			navigator.geolocation.getCurrentPosition(
 				() => resolve(true),
 				() => resolve(false),
-				{ enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
+				{ enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
 			);
 		});
 
