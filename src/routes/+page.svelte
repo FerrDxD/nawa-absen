@@ -197,7 +197,8 @@
 				<div class="overflow-hidden rounded-[28px] border border-[#E5E7EB] dark:border-slate-800 bg-white dark:bg-slate-900 shadow-v2">
 
 					<!-- FOTO SELFIE 3:4 dengan overlay gradient nama + gugus -->
-					<div class="relative w-full" style="aspect-ratio: 3/4; max-height: 480px;">
+					<!-- Foto: max-height kecil di mobile (360px), lebih besar di sm+ (480px) -->
+					<div class="relative w-full" style="aspect-ratio: 3/4; max-height: min(360px, 75vw * 4/3); overflow: hidden;">
 						{#if successReceipt.fotoSnapshot}
 							<img
 								src={successReceipt.fotoSnapshot}
@@ -233,16 +234,16 @@
 						</div>
 
 						<!-- Nama & gugus di atas overlay bawah -->
-						<div class="absolute inset-x-0 bottom-0 px-5 pb-5 pt-10">
-							<p class="font-heading text-2xl font-bold text-white leading-tight drop-shadow-sm">
+						<div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-8 sm:px-5 sm:pb-5">
+							<p class="font-heading text-xl sm:text-2xl font-bold text-white leading-tight drop-shadow-sm truncate">
 								{successReceipt.nama}
 							</p>
-							<div class="mt-1.5 flex items-center gap-2">
-								<span class="rounded-full bg-[#2563EB]/90 backdrop-blur-sm px-3 py-1 text-xs font-bold text-white">
+							<div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+								<span class="rounded-full bg-[#2563EB]/90 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-bold text-white">
 									{successReceipt.nama_gugus}
 								</span>
-								<span class="rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-white flex items-center gap-1.5">
-									<svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+								<span class="rounded-full bg-white/15 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white flex items-center gap-1">
+									<svg class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 										<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
 										<circle cx="12" cy="10" r="3"/>
 									</svg>
@@ -253,7 +254,7 @@
 					</div>
 
 					<!-- DETAIL STRIP DI BAWAH FOTO -->
-					<div class="px-5 py-5 space-y-3">
+					<div class="px-4 py-4 sm:px-5 sm:py-5 space-y-3">
 						<!-- Info row: nama -->
 						<div class="flex items-center justify-between text-xs border-b border-[#E5E7EB] dark:border-slate-800 pb-3">
 							<span class="text-[#64748B] dark:text-slate-400 font-medium">Nama Lengkap</span>
@@ -292,14 +293,10 @@
 				<button
 					type="button"
 					onclick={resetForm}
-					class="w-full rounded-[18px] bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] py-4 text-sm font-semibold text-white hover:scale-[1.01] transition shadow-lg shadow-blue-600/20 min-h-[52px]"
+					class="w-full rounded-[18px] bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] py-3.5 sm:py-4 text-sm font-semibold text-white hover:scale-[1.01] transition shadow-lg shadow-blue-600/20 min-h-[48px] sm:min-h-[52px]"
 				>
 					Selesai
 				</button>
-
-				<p class="text-center text-[11px] text-[#64748B] dark:text-slate-500">
-					Simpan tangkapan layar ini sebagai bukti kehadiran Anda.
-				</p>
 			</div>
 
 		{:else}
