@@ -24,7 +24,9 @@
 		isDragging = true;
 		startX = e.clientX - dragX;
 		if (thumbEl) {
-			thumbEl.setPointerCapture(e.pointerId);
+			try {
+				thumbEl.setPointerCapture(e.pointerId);
+			} catch (err) {}
 		}
 	}
 
@@ -47,7 +49,9 @@
 		if (!isDragging || !containerEl || !thumbEl) return;
 		isDragging = false;
 		if (thumbEl) {
-			thumbEl.releasePointerCapture(e.pointerId);
+			try {
+				thumbEl.releasePointerCapture(e.pointerId);
+			} catch (err) {}
 		}
 
 		const maxDrag = Math.max(0, containerEl.clientWidth - thumbEl.clientWidth - 8);
@@ -69,7 +73,8 @@
 
 <div
 	bind:this={containerEl}
-	class="relative flex h-14 w-full select-none items-center overflow-hidden rounded-full border border-blue-200 dark:border-blue-800 bg-[#EFF6FF] dark:bg-blue-950/70 p-1 shadow-inner"
+	style="touch-action: none;"
+	class="relative flex h-14 w-full select-none items-center overflow-hidden rounded-full border border-blue-200 dark:border-blue-800 bg-[#EFF6FF] dark:bg-blue-950/70 p-1 shadow-inner touch-none"
 >
 	<div
 		class="absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] transition-all {isDragging ? 'duration-75' : 'duration-300'}"
@@ -101,8 +106,8 @@
 		onpointermove={handlePointerMove}
 		onpointerup={handlePointerUp}
 		onpointercancel={handlePointerUp}
-		style="transform: translate3d({dragX}px, 0, 0);"
-		class="relative z-10 flex h-12 w-12 shrink-0 cursor-grab items-center justify-center rounded-full bg-[#2563EB] text-white shadow-md transition-transform active:cursor-grabbing {isDragging ? 'duration-0 scale-95' : 'duration-300'} {disabled || isLoading ? 'pointer-events-none opacity-60' : ''}"
+		style="transform: translate3d({dragX}px, 0, 0); touch-action: none;"
+		class="relative z-10 flex h-12 w-12 shrink-0 cursor-grab items-center justify-center rounded-full bg-[#2563EB] text-white shadow-md transition-transform active:cursor-grabbing touch-none {isDragging ? 'duration-0 scale-95' : 'duration-300'} {disabled || isLoading ? 'pointer-events-none opacity-60' : ''}"
 	>
 		{#if isLoading}
 			<span class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
