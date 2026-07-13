@@ -340,7 +340,7 @@ export async function handlePhotoStorage(
 
 				const publicUrl = env.R2_PUBLIC_URL
 					? `${env.R2_PUBLIC_URL.replace(/\/$/, '')}/${organizedKey}`
-					: `${env.R2_ENDPOINT.replace(/\/$/, '')}/${env.R2_BUCKET_NAME}/${organizedKey}`;
+					: `/api/photo?key=${encodeURIComponent(organizedKey)}`;
 
 				return {
 					fotoUrl: publicUrl,

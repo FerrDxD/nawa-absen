@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { resolvePhotoUrl } from '$lib/utils/photo';
 
 	interface AbsensiRecord {
 		id: number;
@@ -220,7 +221,7 @@
 			const popupHtml = `
 				<div style="font-family: 'Inter', sans-serif; min-width: 200px;">
 					${rec.foto_url || rec.foto_base64 ? `
-						<img src="${rec.foto_url || rec.foto_base64}" alt="${rec.nama}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />
+						<img src="${resolvePhotoUrl(rec.foto_url, rec.foto_base64)}" alt="${rec.nama}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;" />
 					` : ''}
 					<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
 						<span style="background: ${gugusColor.hex}; color: ${gugusColor.textColor}; border: 1px solid ${gugusColor.border}; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 800;">

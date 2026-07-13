@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import AdminAttendanceMap from '$lib/components/AdminAttendanceMap.svelte';
+	import { resolvePhotoUrl } from '$lib/utils/photo';
 
 	interface AbsensiRecord {
 		id: number;
@@ -586,7 +587,7 @@
 												class="block h-11 w-11 overflow-hidden rounded-xl border border-[#E5E7EB] dark:border-slate-700 hover:scale-105 transition shadow-sm"
 											>
 												<img
-													src={row.foto_url || row.foto_base64}
+													src={resolvePhotoUrl(row.foto_url, row.foto_base64)}
 													alt={row.nama}
 													class="h-full w-full object-cover"
 												/>
@@ -746,7 +747,7 @@
 						{#if previewModalRecord.foto_url || previewModalRecord.foto_base64}
 							<div class="overflow-hidden rounded-2xl border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC]">
 								<img
-									src={previewModalRecord.foto_url || previewModalRecord.foto_base64}
+									src={resolvePhotoUrl(previewModalRecord.foto_url, previewModalRecord.foto_base64)}
 									alt={previewModalRecord.nama}
 									class="max-h-72 w-full object-cover"
 								/>
