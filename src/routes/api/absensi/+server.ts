@@ -104,8 +104,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// 5. SIMPAN FOTO (Vercel Blob atau Base64 JPEG)
-		const storageResult = await handlePhotoStorage(foto_base64, nama.trim());
+		// 5. SIMPAN FOTO SELFIE SISWA KE CLOUDFLARE R2 (ORGANIZED)
+		const storageResult = await handlePhotoStorage(foto_base64, {
+			nama: nama.trim(),
+			gugusId: gugusIdNum,
+			tanggal: todayStr
+		});
 
 		// 6. AMBIL USER AGENT & DEVICE FINGERPRINT
 		const userAgent = request.headers.get('user-agent') || 'Unknown User-Agent';

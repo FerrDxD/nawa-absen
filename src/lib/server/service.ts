@@ -3,6 +3,7 @@ import * as schema from './db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 import { env } from '$env/dynamic/private';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export interface GugusItem {
 	id: number;
@@ -256,22 +257,106 @@ export async function checkDuplicateSubmission(
 }
 
 /**
+ * Helper untuk inisialisasi S3Client Cloudflare R2
+ */
+function getR2Client(): S3Client | null {
+	if (!env.R2_ENDPOINT || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
+		return null;
+	}
+	return new S3Client({
+		region: 'auto',
+		endpoint: env.R2_ENDPOINT,
+		credentials: {
+			accessKeyId: env.R2_ACCESS_KEY_ID,
+			secretAccessKey: env.R2_SECRET_ACCESS_KEY
+		}
+	});
+}
+
+export interface PhotoStorageOptions {
+	nama: string;
+	gugusId?: number;
+	tanggal?: string;
+}
+
+/**
+ * Format string nama siswa menjadi slug bersih
+ * Contoh: "Ahmad Fauzi (Padjajaran)" -> "ahmad-fauzi-padjajaran"
+ */
+function slugifyName(str: string): string {
+	return str
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'siswa';
+}
+
+/**
  * Simpan foto snapshot:
- * Pilihan 1: Upload ke Vercel Blob Storage jika BLOB_READ_WRITE_TOKEN tersedia
- * Pilihan 2: Simpan compressed Base64 JPEG langsung di database Postgres / store
+ * Pilihan 1: Upload ke Cloudflare R2 Storage (dari Juan) jika tersedia
+ * Pilihan 2: Upload ke Vercel Blob Storage jika BLOB_READ_WRITE_TOKEN tersedia
+ * Pilihan 3: Simpan compressed Base64 JPEG langsung di database Postgres / store
  */
 export async function handlePhotoStorage(
 	fotoBase64: string,
-	nama: string
-): Promise<{ fotoUrl: string | null; fotoBase64Stored: string | null; storageType: 'blob' | 'base64' }> {
-	// Jika token Vercel Blob tersedia, kita bisa upload sebagai binary blob
+	optionsOrNama: string | PhotoStorageOptions
+): Promise<{ fotoUrl: string | null; fotoBase64Stored: string | null; storageType: 'r2' | 'blob' | 'base64' }> {
+	const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, '');
+	const buffer = Buffer.from(base64Data, 'base64');
+
+	// Extract informasi pengorganisasian (organize & proper naming)
+	const nama = typeof optionsOrNama === 'string' ? optionsOrNama : optionsOrNama.nama;
+	const gugusId = typeof optionsOrNama === 'string' ? undefined : optionsOrNama.gugusId;
+	const tanggal = typeof optionsOrNama === 'string' ? undefined : optionsOrNama.tanggal;
+
+	const dateStr = tanggal || new Date().toISOString().split('T')[0];
+	const gugusFolder = gugusId ? `gugus-${gugusId}` : 'gugus-umum';
+	const slugNama = slugifyName(nama);
+	const timestamp = Date.now();
+
+	// Format penamaan file terorganisir rapi di R2:
+	// selfie-mpls-2026/{YYYY-MM-DD}/gugus-{id}/{slug-nama}-{timestamp}.jpg
+	const organizedKey = `selfie-mpls-2026/${dateStr}/${gugusFolder}/${slugNama}-${timestamp}.jpg`;
+
+	// Pilihan 1: Upload ke Cloudflare R2 (Juan)
+	if (env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET_NAME && fotoBase64.startsWith('data:image')) {
+		try {
+			const r2Client = getR2Client();
+			if (r2Client) {
+				await r2Client.send(
+					new PutObjectCommand({
+						Bucket: env.R2_BUCKET_NAME,
+						Key: organizedKey,
+						Body: buffer,
+						ContentType: 'image/jpeg',
+						CacheControl: 'public, max-age=31536000',
+						Metadata: {
+							student_name: encodeURIComponent(nama.trim()),
+							gugus_id: String(gugusId || '0'),
+							attendance_date: dateStr
+						}
+					})
+				);
+
+				const publicUrl = env.R2_PUBLIC_URL
+					? `${env.R2_PUBLIC_URL.replace(/\/$/, '')}/${organizedKey}`
+					: `${env.R2_ENDPOINT.replace(/\/$/, '')}/${env.R2_BUCKET_NAME}/${organizedKey}`;
+
+				return {
+					fotoUrl: publicUrl,
+					fotoBase64Stored: null,
+					storageType: 'r2'
+				};
+			}
+		} catch (err) {
+			console.error('Gagal upload ke Cloudflare R2, fallback ke storage berikutnya:', err);
+		}
+	}
+
+	// Pilihan 2: Jika token Vercel Blob tersedia, kita bisa upload sebagai binary blob
 	if (env.BLOB_READ_WRITE_TOKEN && fotoBase64.startsWith('data:image')) {
 		try {
-			const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, '');
-			const buffer = Buffer.from(base64Data, 'base64');
-			const fileName = `mpls-2026/${Date.now()}-${nama.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
-			
-			const blobResult = await put(fileName, buffer, {
+			const blobResult = await put(organizedKey, buffer, {
 				access: 'public',
 				contentType: 'image/jpeg'
 			});
