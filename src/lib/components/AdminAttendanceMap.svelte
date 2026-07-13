@@ -65,8 +65,10 @@
 	// Filtered records untuk peta
 	let displayedRecords = $derived(
 		records.filter((r) => {
-			if (!r.latitude || !r.longitude) return false;
-			if (activeGugusFilter !== 'all' && r.gugus_id.toString() !== activeGugusFilter) {
+			const lat = Number(r.latitude);
+			const lng = Number(r.longitude);
+			if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return false;
+			if (activeGugusFilter !== 'all' && r.gugus_id?.toString() !== activeGugusFilter) {
 				return false;
 			}
 			return true;
@@ -199,17 +201,21 @@
 		const bounds = L.latLngBounds([ [schoolLat, schoolLng] ]);
 
 		displayedRecords.forEach((rec) => {
+			const lat = Number(rec.latitude);
+			const lng = Number(rec.longitude);
+			if (isNaN(lat) || isNaN(lng)) return;
+
 			const customIcon = L.divIcon({
-				className: 'student-pin-icon',
+				className: '',
 				html: getMarkerHtml(rec.gugus_id, rec.status),
 				iconSize: [32, 32],
 				iconAnchor: [16, 16],
 				popupAnchor: [0, -18]
 			});
 
-			const marker = L.marker([rec.latitude, rec.longitude], { icon: customIcon }).addTo(markersLayer);
+			const marker = L.marker([lat, lng], { icon: customIcon }).addTo(markersLayer);
 
-			bounds.extend([rec.latitude, rec.longitude]);
+			bounds.extend([lat, lng]);
 
 			const timeFormatted = new Date(rec.created_at).toLocaleTimeString('id-ID', {
 				hour: '2-digit',
@@ -255,8 +261,15 @@
 	}
 
 	$effect(() => {
-		// Reactive update saat records / koordinat sekolah / filter berubah
-		if (map && L) {
+		// PENTING DI SVELTE 5: Akses dependensi reaktif terlebih dahulu agar sistem melacak perubahan data
+		const _recs = displayedRecords;
+		const _len = displayedRecords.length;
+		const _lat = schoolLat;
+		const _lng = schoolLng;
+		const _rad = schoolRadius;
+		const _f = activeGugusFilter;
+
+		if (map && L && markersLayer) {
 			renderSchoolGeofence();
 			updateMarkers();
 		}

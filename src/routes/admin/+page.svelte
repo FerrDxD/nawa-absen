@@ -443,7 +443,7 @@
 
 			<!-- PETA SUNGGUHAN INTERAKTIF DENGAN KODE WARNA GUGUS 1 - 8 -->
 			<AdminAttendanceMap
-				records={records}
+				records={filteredRecords}
 				schoolLat={schoolLat}
 				schoolLng={schoolLng}
 				schoolRadius={schoolRadius}
