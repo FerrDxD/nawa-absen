@@ -4,12 +4,29 @@
 	import SwipeToConfirm from '$lib/components/SwipeToConfirm.svelte';
 	import PermissionGuideModal from '$lib/components/PermissionGuideModal.svelte';
 
+	import { getPesertaByGugus, type PesertaMPLS } from '$lib/data/peserta_mpls_2026';
+
 	let { data } = $props();
 
 	// State Form
-	let namaLengkap = $state('');
 	let selectedGugusId = $state<number | ''>('');
+	let namaLengkap = $state('');
+	let searchNama = $state('');
+
 	let gugusList = $derived(data.gugusList || []);
+	let pesertaListForGugus = $derived(
+		selectedGugusId !== '' ? getPesertaByGugus(Number(selectedGugusId)) : []
+	);
+	let filteredPesertaList = $derived(
+		searchNama.trim() === ''
+			? pesertaListForGugus
+			: pesertaListForGugus.filter((p) =>
+					p.nama.toLowerCase().includes(searchNama.trim().toLowerCase())
+				)
+	);
+	let selectedPesertaInfo = $derived(
+		pesertaListForGugus.find((p) => p.nama === namaLengkap) || null
+	);
 	let fotoBase64 = $state<string>('');
 	let userLat = $state<number | null>(null);
 	let userLng = $state<number | null>(null);
@@ -29,6 +46,8 @@
 		waktu: string;
 		jarakMeter: number;
 		fotoSnapshot: string;
+		isTepatWaktu: boolean;
+		statusWaktuLabel: string;
 	} | null>(null);
 
 	let maxRadius = $derived(data.schoolConfig?.radius_meter ?? 70);
@@ -46,6 +65,16 @@
 	let selectedGugusName = $derived(
 		gugusList.find((g: any) => g.id === selectedGugusId)?.nama_gugus || '-'
 	);
+
+	function handleGugusChange(e: Event) {
+		const target = e.target as HTMLSelectElement;
+		const val = target.value ? Number(target.value) : '';
+		if (selectedGugusId !== val) {
+			selectedGugusId = val;
+			namaLengkap = '';
+			searchNama = '';
+		}
+	}
 
 	function handlePhotoTaken(base64: string) {
 		fotoBase64 = base64;
@@ -117,7 +146,9 @@
 						minute: '2-digit'
 					}) + ' WIB',
 					jarakMeter: result.data.jarakMeter,
-					fotoSnapshot: fotoBase64
+					fotoSnapshot: fotoBase64,
+					isTepatWaktu: result.data.isTepatWaktu ?? true,
+					statusWaktuLabel: result.data.statusWaktuLabel ?? 'Tepat Waktu'
 				};
 			} else {
 				submitError = result.message || 'Gagal mengirim data absensi.';
@@ -134,6 +165,7 @@
 	function resetForm() {
 		namaLengkap = '';
 		selectedGugusId = '';
+		searchNama = '';
 		fotoBase64 = '';
 		successReceipt = null;
 		submitError = null;
@@ -183,13 +215,19 @@
 
 				<!-- Status header pill -->
 				<div class="flex items-center justify-center gap-2.5">
-					<div class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#10B981] shadow-sm">
-						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-							<polyline points="20 6 9 17 4 12"/>
-						</svg>
+					<div class="flex h-8 w-8 items-center justify-center rounded-full {successReceipt.isTepatWaktu ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : 'bg-red-100 dark:bg-red-950 text-[#EF4444]'} shadow-sm">
+						{#if successReceipt.isTepatWaktu}
+							<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+								<polyline points="20 6 9 17 4 12"/>
+							</svg>
+						{:else}
+							<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+								<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+							</svg>
+						{/if}
 					</div>
-					<span class="font-heading text-sm font-bold text-[#10B981] tracking-wide uppercase">
-						Presensi Berhasil Dicatat
+					<span class="font-heading text-sm font-bold {successReceipt.isTepatWaktu ? 'text-[#10B981]' : 'text-[#EF4444]'} tracking-wide uppercase">
+						Presensi Berhasil Dicatat ({successReceipt.statusWaktuLabel})
 					</span>
 				</div>
 
@@ -220,9 +258,9 @@
 
 						<!-- Badge verifikasi kiri atas -->
 						<div class="absolute top-4 left-4">
-							<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 backdrop-blur-sm px-3 py-1 text-[10px] font-bold text-white shadow-sm">
+							<span class="inline-flex items-center gap-1.5 rounded-full {successReceipt.isTepatWaktu ? 'bg-emerald-500/90' : 'bg-red-500/90'} backdrop-blur-sm px-3 py-1 text-[10px] font-bold text-white shadow-sm">
 								<span class="h-1.5 w-1.5 rounded-full bg-white animate-pulse"></span>
-								TERVERIFIKASI
+								{successReceipt.isTepatWaktu ? 'TEPAT WAKTU' : 'TERLAMBAT'}
 							</span>
 						</div>
 
@@ -273,7 +311,12 @@
 						<!-- Info row: waktu -->
 						<div class="flex items-center justify-between text-xs">
 							<span class="text-[#64748B] dark:text-slate-400 font-medium">Jam Presensi</span>
-							<span class="font-bold text-[#0F172A] dark:text-white">{successReceipt.waktu}</span>
+							<div class="flex items-center gap-2">
+								<span class="font-bold text-[#0F172A] dark:text-white">{successReceipt.waktu}</span>
+								<span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold {successReceipt.isTepatWaktu ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : 'bg-red-100 dark:bg-red-950 text-[#EF4444]'}">
+									{successReceipt.statusWaktuLabel}
+								</span>
+							</div>
 						</div>
 
 						<!-- Stempel resmi -->
@@ -307,40 +350,129 @@
 			{/if}
 
 			<form onsubmit={handleOpenCrossCheck} class="space-y-6">
-				<!-- CARD 1: FORM DATA DIRI (RINGKAS & LEGA) -->
-				<div class="rounded-[24px] border border-[#E5E7EB] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-v2 card-hover space-y-5">
+				<!-- CARD 1: FORM DATA DIRI (STRUKTUR BARU: GUGUS DULU -> BUKA NAMA PESERTA) -->
+				<div class="rounded-[24px] border border-[#E5E7EB] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-v2 card-hover space-y-6">
+					<!-- LANGKAH 1: PILIH GUGUS -->
 					<div>
-						<label for="namaLengkap" class="block text-xs font-semibold text-[#0F172A] dark:text-white mb-2">
-							Nama Lengkap
-						</label>
-						<input
-							id="namaLengkap"
-							type="text"
-							bind:value={namaLengkap}
-							required
-							minlength="3"
-							placeholder="Masukkan nama lengkap"
-							class="w-full rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-4 py-3.5 text-sm text-[#0F172A] dark:text-white placeholder-[#64748B] focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15 transition min-h-[48px]"
-						/>
-					</div>
+						<div class="flex items-center justify-between mb-2">
+							<label for="gugusSelect" class="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white">
+								1. Pilih Gugus MPLS Kamu
+							</label>
+							{#if selectedGugusId !== ''}
+								<span class="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/80 px-2.5 py-0.5 text-[11px] font-semibold text-[#2563EB] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+									{pesertaListForGugus.length} Peserta
+								</span>
+							{/if}
+						</div>
 
-					<div>
-						<label for="gugusSelect" class="block text-xs font-semibold text-[#0F172A] dark:text-white mb-2">
-							Pilih Gugus MPLS
-						</label>
 						<select
 							id="gugusSelect"
-							bind:value={selectedGugusId}
+							value={selectedGugusId}
+							onchange={handleGugusChange}
 							required
-							class="w-full rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-4 py-3.5 text-sm font-medium text-[#0F172A] dark:text-white focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15 transition min-h-[48px]"
+							class="w-full rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-4 py-3.5 text-sm font-semibold text-[#0F172A] dark:text-white focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 transition min-h-[50px] shadow-sm"
 						>
-							<option value="" disabled>Pilih Gugus MPLS</option>
+							<option value="" disabled>-- Pilih Gugus MPLS 2026 --</option>
 							{#each gugusList as gugus (gugus.id)}
 								<option value={gugus.id}>
 									{gugus.nama_gugus}
 								</option>
 							{/each}
 						</select>
+					</div>
+
+					<!-- LANGKAH 2: PILIH NAMA PESERTA (TERBUKA SETELAH GUGUS DIPILIH) -->
+					<div class="pt-2 border-t border-[#F1F5F9] dark:border-slate-800/80 transition-all duration-300">
+						{#if selectedGugusId === ''}
+							<!-- TERKUNCI SEBELUM PILIH GUGUS -->
+							<div class="rounded-[18px] border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 p-5 text-center transition-all">
+								<div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+									<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+										<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+									</svg>
+								</div>
+								<h3 class="text-xs font-bold text-slate-700 dark:text-slate-300">
+									Daftar Nama Peserta Terkunci
+								</h3>
+								<p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+									Silakan pilih <span class="font-semibold text-blue-600 dark:text-blue-400">Gugus MPLS</span> terlebih dahulu pada Langkah 1 di atas.
+								</p>
+							</div>
+						{:else}
+							<!-- TERBUKA SESUAI GUGUS TERPILIH -->
+							<div class="space-y-3 animate-fade-in">
+								<div class="flex items-center justify-between">
+									<label for="namaLengkap" class="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white">
+										2. Pilih Nama Lengkap Kamu
+									</label>
+									<span class="text-[11px] font-medium text-[#64748B] dark:text-slate-400">
+										{selectedGugusName}
+									</span>
+								</div>
+
+								<!-- KOTAK PENCARIAN CEPAT NAMA -->
+								<div class="relative">
+									<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#64748B]">
+										<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+										</svg>
+									</div>
+									<input
+										type="text"
+										bind:value={searchNama}
+										placeholder="Cari cepat nama kamu di gugus ini..."
+										class="w-full rounded-[14px] border border-[#E5E7EB] dark:border-slate-700 bg-white dark:bg-slate-950 pl-10 pr-9 py-2.5 text-xs text-[#0F172A] dark:text-white placeholder-[#94A3B8] focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/15 transition"
+									/>
+									{#if searchNama}
+										<button
+											type="button"
+											aria-label="Hapus pencarian"
+											onclick={() => (searchNama = '')}
+											class="absolute inset-y-0 right-0 flex items-center pr-3 text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white"
+										>
+											<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+											</svg>
+										</button>
+									{/if}
+								</div>
+
+								<!-- DROPDOWN PILIH NAMA PESERTA -->
+								<select
+									id="namaLengkap"
+									bind:value={namaLengkap}
+									required
+									class="w-full rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-4 py-3.5 text-sm font-semibold text-[#0F172A] dark:text-white focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 transition min-h-[50px] shadow-sm"
+								>
+									<option value="" disabled>-- Pilih Nama Kamu ({filteredPesertaList.length} Nama Tersedia) --</option>
+									{#each filteredPesertaList as peserta (peserta.nisn)}
+										<option value={peserta.nama}>
+											{peserta.nama} — {peserta.sekolah_asal}
+										</option>
+									{/each}
+								</select>
+
+								<!-- PIL KONSISTENSI & INFORMASI ASAL SEKOLAH PESERTA TERPILIH -->
+								{#if selectedPesertaInfo}
+									<div class="mt-3 rounded-[16px] border border-blue-200/80 dark:border-blue-800/80 bg-blue-50/60 dark:bg-blue-950/50 p-3.5 flex items-start gap-3 animate-fade-in">
+										<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#2563EB] text-white shadow-sm">
+											<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+												<polyline points="20 6 9 17 4 12"/>
+											</svg>
+										</div>
+										<div class="min-w-0 flex-1">
+											<p class="text-xs font-bold text-[#0F172A] dark:text-white truncate">
+												{selectedPesertaInfo.nama}
+											</p>
+											<p class="text-[11px] text-[#64748B] dark:text-slate-300 mt-0.5">
+												Asal: <span class="font-semibold text-blue-700 dark:text-blue-300">{selectedPesertaInfo.sekolah_asal}</span> • Jalur: <span class="font-medium">{selectedPesertaInfo.jalur}</span>
+											</p>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 
@@ -424,6 +556,11 @@
 						<p class="mt-1 font-heading text-lg sm:text-xl font-bold text-[#0F172A] dark:text-white truncate">
 							{namaLengkap}
 						</p>
+						{#if selectedPesertaInfo}
+							<p class="mt-0.5 text-xs text-[#64748B] dark:text-slate-400 truncate">
+								{selectedPesertaInfo.sekolah_asal}
+							</p>
+						{/if}
 					</div>
 
 					<!-- Bento Box 2: Gugus MPLS -->

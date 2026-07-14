@@ -557,7 +557,9 @@
 							class="rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-3.5 py-2 text-xs font-semibold text-[#0F172A] dark:text-white focus:outline-none"
 						>
 							<option value="all">Semua Status</option>
-							<option value="valid">Valid (Dalam Radius)</option>
+							<option value="valid">Valid (Semua Dalam Radius)</option>
+							<option value="tepat_waktu">Tepat Waktu (&le; 06:30)</option>
+							<option value="terlambat">Terlambat (&gt; 06:30)</option>
 							<option value="ditolak_radius">Ditolak Radius</option>
 						</select>
 					</div>
@@ -622,9 +624,9 @@
 
 									<td class="py-3 px-3">
 										<span
-											class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide {row.status === 'valid' ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : 'bg-red-100 dark:bg-red-950 text-[#EF4444]'}"
+											class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide {row.status === 'valid' || row.status === 'tepat_waktu' ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : row.status === 'terlambat' ? 'bg-red-100 dark:bg-red-950 text-[#EF4444]' : 'bg-orange-100 dark:bg-orange-950 text-[#F97316]'}"
 										>
-											{row.status}
+											{row.status === 'tepat_waktu' ? 'Tepat Waktu' : row.status === 'terlambat' ? 'Terlambat' : row.status}
 										</span>
 									</td>
 
@@ -770,6 +772,12 @@
 							<div class="flex justify-between">
 								<span class="text-[#64748B]">Akurasi Satelit GPS:</span>
 								<span class="font-semibold text-[#64748B]">±{previewModalRecord.accuracy_meter} meter</span>
+							</div>
+							<div class="flex justify-between items-center">
+								<span class="text-[#64748B]">Status Waktu Presensi:</span>
+								<span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {previewModalRecord.status === 'valid' || previewModalRecord.status === 'tepat_waktu' ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : previewModalRecord.status === 'terlambat' ? 'bg-red-100 dark:bg-red-950 text-[#EF4444]' : 'bg-orange-100 dark:bg-orange-950 text-[#F97316]'}">
+									{previewModalRecord.status === 'tepat_waktu' ? 'Tepat Waktu (<= 06:30)' : previewModalRecord.status === 'terlambat' ? 'Terlambat (> 06:30)' : previewModalRecord.status}
+								</span>
 							</div>
 							<div class="flex justify-between">
 								<span class="text-[#64748B]">Perangkat / Fingerprint:</span>

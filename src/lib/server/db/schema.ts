@@ -17,7 +17,7 @@ export const absensi = pgTable('absensi', {
 	longitude: doublePrecision('longitude').notNull(),
 	jarak_meter: doublePrecision('jarak_meter').notNull(),
 	accuracy_meter: doublePrecision('accuracy_meter').notNull(),
-	status: text('status').notNull().default('valid'), // 'valid' | 'ditolak_radius'
+	status: text('status').notNull().default('valid'), // 'valid' | 'tepat_waktu' | 'terlambat' | 'ditolak_radius'
 	keterangan: text('keterangan'),
 	tanggal: text('tanggal').notNull(), // format YYYY-MM-DD untuk pencegahan double submission per hari
 	user_agent: text('user_agent'),

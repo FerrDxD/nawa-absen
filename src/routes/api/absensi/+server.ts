@@ -119,7 +119,22 @@ export const POST: RequestHandler = async ({ request }) => {
 				: String(device_fingerprint)
 			: 'Simple Fingerprint';
 
-		// 7. SIMPAN REKORD KE DATABASE
+		// 7. CEK WAKTU PRESENSI (TEPAT WAKTU <= 06:30 ATAU TERLAMBAT > 06:30 WIB)
+		const now = new Date();
+		const timeParts = new Intl.DateTimeFormat('id-ID', {
+			timeZone: 'Asia/Jakarta',
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		}).formatToParts(now);
+		const hours = Number(timeParts.find((p) => p.type === 'hour')?.value || 0);
+		const minutes = Number(timeParts.find((p) => p.type === 'minute')?.value || 0);
+
+		const isTepatWaktu = hours < 6 || (hours === 6 && minutes <= 30);
+		const statusRecord = isTepatWaktu ? 'tepat_waktu' : 'terlambat';
+		const statusWaktuLabel = isTepatWaktu ? 'Tepat Waktu' : 'Terlambat';
+
+		// 8. SIMPAN REKORD KE DATABASE
 		const savedRecord = await saveAbsensiRecord({
 			nama: nama.trim(),
 			gugus_id: gugusIdNum,
@@ -129,7 +144,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			longitude,
 			jarak_meter: geoResult.jarakMeter,
 			accuracy_meter: geoResult.accuracyMeter,
-			status: 'valid',
+			status: statusRecord,
 			keterangan: geoResult.message,
 			tanggal: todayStr,
 			user_agent: userAgent,
@@ -147,7 +162,10 @@ export const POST: RequestHandler = async ({ request }) => {
 				jarakMeter: savedRecord.jarak_meter,
 				accuracyMeter: savedRecord.accuracy_meter,
 				isAccuracyWarning: geoResult.isAccuracyWarning,
-				keterangan: geoResult.message
+				keterangan: geoResult.message,
+				statusRecord,
+				statusWaktuLabel,
+				isTepatWaktu
 			}
 		});
 	} catch (err: any) {

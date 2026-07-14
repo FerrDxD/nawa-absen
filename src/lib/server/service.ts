@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import * as schema from './db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 import { env } from '$env/dynamic/private';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -238,7 +238,7 @@ export async function checkDuplicateSubmission(
 						sql`LOWER(${schema.absensi.nama}) = ${normalizedNama}`,
 						eq(schema.absensi.gugus_id, gugusId),
 						eq(schema.absensi.tanggal, tanggal),
-						eq(schema.absensi.status, 'valid')
+						inArray(schema.absensi.status, ['valid', 'tepat_waktu', 'terlambat'])
 					)
 				);
 			return rows.length > 0;
@@ -252,7 +252,7 @@ export async function checkDuplicateSubmission(
 			a.nama.trim().toLowerCase() === normalizedNama &&
 			a.gugus_id === gugusId &&
 			a.tanggal === tanggal &&
-			a.status === 'valid'
+			['valid', 'tepat_waktu', 'terlambat'].includes(a.status)
 	);
 }
 
@@ -501,8 +501,12 @@ export async function getRekapAbsensi(filters?: {
 			if (filters?.tanggal) {
 				filtered = filtered.filter((r) => r.tanggal === filters.tanggal);
 			}
-			if (filters?.status) {
-				filtered = filtered.filter((r) => r.status === filters.status);
+			if (filters?.status && filters.status !== 'all') {
+				if (filters.status === 'valid') {
+					filtered = filtered.filter((r) => ['valid', 'tepat_waktu', 'terlambat'].includes(r.status));
+				} else {
+					filtered = filtered.filter((r) => r.status === filters.status);
+				}
 			}
 			return filtered;
 		} catch (e) {
@@ -517,8 +521,12 @@ export async function getRekapAbsensi(filters?: {
 	if (filters?.tanggal) {
 		filtered = filtered.filter((r) => r.tanggal === filters.tanggal);
 	}
-	if (filters?.status) {
-		filtered = filtered.filter((r) => r.status === filters.status);
+	if (filters?.status && filters.status !== 'all') {
+		if (filters.status === 'valid') {
+			filtered = filtered.filter((r) => ['valid', 'tepat_waktu', 'terlambat'].includes(r.status));
+		} else {
+			filtered = filtered.filter((r) => r.status === filters.status);
+		}
 	}
 	return filtered;
 }
@@ -532,8 +540,8 @@ export async function getAbsensiStats(filters?: {
 	status?: string;
 }) {
 	const all = await getRekapAbsensi(filters);
-	const validRecords = all.filter((r) => r.status === 'valid');
-	const ditolakRecords = all.filter((r) => r.status !== 'valid');
+	const validRecords = all.filter((r) => ['valid', 'tepat_waktu', 'terlambat'].includes(r.status));
+	const ditolakRecords = all.filter((r) => !['valid', 'tepat_waktu', 'terlambat'].includes(r.status));
 
 	// Total per Gugus
 	const perGugus: Record<string, { total: number; valid: number; ditolak: number }> = {};
@@ -541,7 +549,7 @@ export async function getAbsensiStats(filters?: {
 		const gName = rec.nama_gugus || `Gugus ${rec.gugus_id}`;
 		if (!perGugus[gName]) perGugus[gName] = { total: 0, valid: 0, ditolak: 0 };
 		perGugus[gName].total++;
-		if (rec.status === 'valid') perGugus[gName].valid++;
+		if (['valid', 'tepat_waktu', 'terlambat'].includes(rec.status)) perGugus[gName].valid++;
 		else perGugus[gName].ditolak++;
 	}
 

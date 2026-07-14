@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getGugusList, getDynamicSchoolConfig } from '$lib/server/service';
+import { PESERTA_MPLS_2026 } from '$lib/data/peserta_mpls_2026';
 
 export const load: PageServerLoad = async () => {
 	const gugusList = await getGugusList();
@@ -7,6 +8,7 @@ export const load: PageServerLoad = async () => {
 
 	return {
 		gugusList,
-		schoolConfig: config
+		schoolConfig: config,
+		pesertaList: PESERTA_MPLS_2026
 	};
 };
