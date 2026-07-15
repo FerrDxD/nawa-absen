@@ -35,7 +35,7 @@
 	let countdownTimer: any = null;
 	let consecutiveFaceFrames = 0;
 
-	// --- 2 Mode Verifikasi Wajah & Timer 10 Detik ---
+	// --- 2 Mode Verifikasi Wajah & Timer 5 Detik ---
 	let captureMode = $state<'auto' | 'manual'>('auto');
 	let showManualPromptModal = $state(false);
 	let manualPromptTimer: any = null;
@@ -47,7 +47,7 @@
 				if (isCameraActive && !capturedPhotoBase64 && captureMode === 'auto') {
 					showManualPromptModal = true;
 				}
-			}, 10000); // 10 detik tanpa deteksi wajah otomatis -> munculkan pop up
+			}, 5000); // 5 detik tanpa deteksi wajah otomatis -> munculkan pop up
 		}
 	}
 
@@ -380,26 +380,6 @@
 		</div>
 
 		<div class="flex items-center gap-2 self-end sm:self-auto">
-			<!-- Mode Switcher Tabs -->
-			{#if !capturedPhotoBase64 && isCameraActive}
-				<div class="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-[#E5E7EB] dark:border-slate-700">
-					<button
-						type="button"
-						onclick={switchToAutoMode}
-						class="rounded-lg px-2.5 py-1 text-[11px] font-bold transition {captureMode === 'auto' ? 'bg-white dark:bg-slate-900 text-[#2563EB] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A] dark:hover:text-white'}"
-					>
-						⚡ Otomatis
-					</button>
-					<button
-						type="button"
-						onclick={switchToManualMode}
-						class="rounded-lg px-2.5 py-1 text-[11px] font-bold transition {captureMode === 'manual' ? 'bg-white dark:bg-slate-900 text-[#2563EB] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A] dark:hover:text-white'}"
-					>
-						📸 Manual
-					</button>
-				</div>
-			{/if}
-
 			<!-- Status Kamera Pill -->
 			<div class="rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors {captureMode === 'manual' && !capturedPhotoBase64 ? 'bg-blue-50 dark:bg-blue-950/60 text-[#2563EB] border border-blue-200 dark:border-blue-800/60' : faceStatus === 'capturing' || faceStatus === 'detected' || capturedPhotoBase64 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#10B981] border border-emerald-200 dark:border-emerald-800/60' : 'bg-slate-100 dark:bg-slate-800 text-[#64748B] dark:text-slate-400'}">
 				<span class="h-2 w-2 rounded-full {captureMode === 'manual' && !capturedPhotoBase64 ? 'bg-[#2563EB]' : faceStatus === 'capturing' || faceStatus === 'detected' || capturedPhotoBase64 ? 'bg-[#10B981] animate-pulse' : 'bg-[#64748B]'}"></span>
@@ -450,7 +430,7 @@
 			</div>
 		{/if}
 
-		<!-- Pop up Overlay: 10 Detik Tidak Ada Wajah Terdeteksi -->
+		<!-- Pop up Overlay: 5 Detik Tidak Ada Wajah Terdeteksi -->
 		{#if showManualPromptModal && !capturedPhotoBase64}
 			<div class="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4 transition-all">
 				<div class="w-full max-w-xs sm:max-w-sm rounded-[22px] border border-slate-700 bg-slate-900 p-5 text-center shadow-2xl space-y-3.5">
