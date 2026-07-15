@@ -507,10 +507,15 @@ export async function getRekapAbsensi(filters?: {
 				.orderBy(desc(schema.absensi.created_at));
 
 			const result = await query;
-			let filtered = result.map((r) => ({
-				...r,
-				nama_gugus: r.nama_gugus || `Gugus ${r.gugus_id}`
-			})) as AbsensiRecord[];
+			let filtered = result.map((r) => {
+				// Hitung tanggal WIB yang sebenarnya dari created_at untuk mengoreksi data akibat bug UTC sebelumnya
+				const trueTanggal = getTodayDateStrWIB(new Date(r.created_at));
+				return {
+					...r,
+					tanggal: trueTanggal,
+					nama_gugus: r.nama_gugus || `Gugus ${r.gugus_id}`
+				};
+			}) as AbsensiRecord[];
 
 			if (filters?.gugusId) {
 				filtered = filtered.filter((r) => r.gugus_id === filters.gugusId);
@@ -531,7 +536,10 @@ export async function getRekapAbsensi(filters?: {
 		}
 	}
 
-	let filtered = [...memoryAbsensi];
+	let filtered = memoryAbsensi.map((r) => ({
+		...r,
+		tanggal: getTodayDateStrWIB(new Date(r.created_at))
+	}));
 	if (filters?.gugusId) {
 		filtered = filtered.filter((r) => r.gugus_id === filters.gugusId);
 	}
@@ -577,7 +585,11 @@ export async function getAbsensiStats(filters?: {
 		perJam[label] = 0;
 	}
 	for (const rec of validRecords) {
-		const hour = new Date(rec.created_at).getHours();
+		const hour = Number(new Intl.DateTimeFormat('id-ID', {
+			timeZone: 'Asia/Jakarta',
+			hour: 'numeric',
+			hour12: false
+		}).format(new Date(rec.created_at)));
 		const label = `${String(hour).padStart(2, '0')}:00`;
 		perJam[label] = (perJam[label] || 0) + 1;
 	}

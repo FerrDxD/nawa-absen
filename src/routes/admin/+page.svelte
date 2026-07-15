@@ -482,20 +482,22 @@
 					<h3 class="font-heading text-base font-bold text-[#0F172A] dark:text-white mb-4">
 						Grafik Kedatangan Siswa (Per Jam)
 					</h3>
-					<div class="flex items-end justify-between gap-2 h-52 pt-4 pb-2 border-b border-[#E5E7EB] dark:border-slate-800">
-						{#each Object.entries(stats.perJam) as [jam, count]}
-							<div class="flex flex-col items-center flex-1">
-								<span class="text-[11px] font-bold text-[#0F172A] dark:text-white mb-1.5">{count > 0 ? count : ''}</span>
-								<div
-									class="w-full max-w-[32px] rounded-t-lg bg-gradient-to-t from-[#2563EB] to-[#60A5FA] transition-all duration-300"
-									style="height: {Math.max((count / Math.max(1, ...Object.values(stats.perJam))) * 140, 6)}px;"
-								></div>
-								<span class="mt-2.5 text-[10px] font-semibold text-[#64748B]">{jam}</span>
-							</div>
-						{/each}
-						{#if Object.keys(stats.perJam).length === 0}
-							<p class="w-full text-center text-xs text-[#64748B] self-center">Belum ada aktivitas presensi hari ini</p>
-						{/if}
+					<div class="overflow-x-auto min-w-full">
+						<div class="flex items-end justify-between gap-1.5 h-52 pt-4 pb-2 border-b border-[#E5E7EB] dark:border-slate-800 min-w-[360px] sm:min-w-0">
+							{#each Object.entries(stats.perJam) as [jam, count]}
+								<div class="flex flex-col items-center flex-1">
+									<span class="text-[11px] font-bold text-[#0F172A] dark:text-white mb-1.5">{count > 0 ? count : ''}</span>
+									<div
+										class="w-full max-w-[28px] sm:max-w-[32px] rounded-t-lg bg-gradient-to-t from-[#2563EB] to-[#60A5FA] transition-all duration-300"
+										style="height: {Math.max((count / Math.max(1, ...Object.values(stats.perJam))) * 140, 6)}px;"
+									></div>
+									<span class="mt-2.5 text-[9px] sm:text-[10px] font-semibold text-[#64748B]">{jam}</span>
+								</div>
+							{/each}
+							{#if Object.keys(stats.perJam).length === 0}
+								<p class="w-full text-center text-xs text-[#64748B] self-center">Belum ada aktivitas presensi hari ini</p>
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -599,7 +601,7 @@
 										{/if}
 									</td>
 
-									<td class="py-3 px-3 font-bold text-[#0F172A] dark:text-white">
+									<td class="py-3 px-3 font-bold text-[#0F172A] dark:text-white max-w-[150px] sm:max-w-[200px] truncate" title={row.nama}>
 										{row.nama}
 									</td>
 
@@ -757,31 +759,31 @@
 						{/if}
 
 						<div class="space-y-2.5 text-xs rounded-2xl bg-[#F8FAFC] dark:bg-slate-950 p-4 border border-[#E5E7EB] dark:border-slate-800">
-							<div class="flex justify-between">
-								<span class="text-[#64748B]">Nama Lengkap:</span>
-								<span class="font-bold text-[#0F172A] dark:text-white">{previewModalRecord.nama}</span>
+							<div class="flex justify-between gap-3">
+								<span class="text-[#64748B] shrink-0">Nama Lengkap:</span>
+								<span class="font-bold text-[#0F172A] dark:text-white text-right break-words">{previewModalRecord.nama}</span>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-[#64748B]">Gugus MPLS:</span>
-								<span class="font-semibold text-[#2563EB]">{previewModalRecord.nama_gugus}</span>
+							<div class="flex justify-between gap-3">
+								<span class="text-[#64748B] shrink-0">Gugus MPLS:</span>
+								<span class="font-semibold text-[#2563EB] text-right break-words">{previewModalRecord.nama_gugus}</span>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-[#64748B]">Jarak dari Satelit Sekolah:</span>
-								<span class="font-bold text-[#10B981]">{previewModalRecord.jarak_meter} meter</span>
+							<div class="flex justify-between gap-3">
+								<span class="text-[#64748B] shrink-0">Jarak dari Satelit Sekolah:</span>
+								<span class="font-bold text-[#10B981] text-right">{previewModalRecord.jarak_meter} meter</span>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-[#64748B]">Akurasi Satelit GPS:</span>
-								<span class="font-semibold text-[#64748B]">±{previewModalRecord.accuracy_meter} meter</span>
+							<div class="flex justify-between gap-3">
+								<span class="text-[#64748B] shrink-0">Akurasi Satelit GPS:</span>
+								<span class="font-semibold text-[#64748B] text-right">±{previewModalRecord.accuracy_meter} meter</span>
 							</div>
-							<div class="flex justify-between items-center">
-								<span class="text-[#64748B]">Status Waktu Presensi:</span>
-								<span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {previewModalRecord.status === 'valid' || previewModalRecord.status === 'tepat_waktu' ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : previewModalRecord.status === 'terlambat' ? 'bg-red-100 dark:bg-red-950 text-[#EF4444]' : 'bg-orange-100 dark:bg-orange-950 text-[#F97316]'}">
+							<div class="flex justify-between gap-3 items-center">
+								<span class="text-[#64748B] shrink-0">Status Waktu Presensi:</span>
+								<span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-right {previewModalRecord.status === 'valid' || previewModalRecord.status === 'tepat_waktu' ? 'bg-emerald-100 dark:bg-emerald-950 text-[#10B981]' : previewModalRecord.status === 'terlambat' ? 'bg-red-100 dark:bg-red-950 text-[#EF4444]' : 'bg-orange-100 dark:bg-orange-950 text-[#F97316]'}">
 									{previewModalRecord.status === 'tepat_waktu' ? 'Tepat Waktu (<= 06:30)' : previewModalRecord.status === 'terlambat' ? 'Terlambat (> 06:30)' : previewModalRecord.status}
 								</span>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-[#64748B]">Perangkat / Fingerprint:</span>
-								<span class="text-[#64748B]">{previewModalRecord.device_info || 'Perangkat Seluler'}</span>
+							<div class="flex justify-between gap-3">
+								<span class="text-[#64748B] shrink-0">Perangkat / Fingerprint:</span>
+								<span class="text-[#64748B] text-right break-all">{previewModalRecord.device_info || 'Perangkat Seluler'}</span>
 							</div>
 						</div>
 
