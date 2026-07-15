@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: nawa_absen_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: nawa_absen
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    image: oven/bun:1
+    container_name: nawa_absen_app
+    working_dir: /app
+    volumes:
+      - .:/app
+      # Ignore local node_modules to avoid OS-specific binary conflicts
+      - /app/node_modules
+    ports:
+      - "5173:5173" # SvelteKit/Vite default port
+    environment:
+      # Bypass SSL Error (UNABLE_TO_VERIFY_LEAF_SIGNATURE) saat download package
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      # Koneksi ke container database (sesuai POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
+      DATABASE_URL: postgresql://postgres:password@db:5432/nawa_absen
+    # Menginstall dependencies jika belum ada dan menjalankan dev server
+    command: sh -c "bun install && bun run dev --host"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
