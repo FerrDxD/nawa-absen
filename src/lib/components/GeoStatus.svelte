@@ -201,8 +201,8 @@
 			},
 			{
 				enableHighAccuracy: true,
-				timeout: 6000,
-				maximumAge: 15000 // Izinkan cache 15 detik agar langsung instan setelah modal izin
+				timeout: 20000,
+				maximumAge: 0 // Selalu segar — tidak boleh pakai cache untuk absensi
 			}
 		);
 

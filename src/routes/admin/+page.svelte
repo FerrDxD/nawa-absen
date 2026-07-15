@@ -482,20 +482,22 @@
 					<h3 class="font-heading text-base font-bold text-[#0F172A] dark:text-white mb-4">
 						Grafik Kedatangan Siswa (Per Jam)
 					</h3>
-					<div class="flex items-end justify-between gap-2 h-52 pt-4 pb-2 border-b border-[#E5E7EB] dark:border-slate-800">
-						{#each Object.entries(stats.perJam) as [jam, count]}
-							<div class="flex flex-col items-center flex-1">
-								<span class="text-[11px] font-bold text-[#0F172A] dark:text-white mb-1.5">{count > 0 ? count : ''}</span>
-								<div
-									class="w-full max-w-[32px] rounded-t-lg bg-gradient-to-t from-[#2563EB] to-[#60A5FA] transition-all duration-300"
-									style="height: {Math.max((count / Math.max(1, ...Object.values(stats.perJam))) * 140, 6)}px;"
-								></div>
-								<span class="mt-2.5 text-[10px] font-semibold text-[#64748B]">{jam}</span>
-							</div>
-						{/each}
-						{#if Object.keys(stats.perJam).length === 0}
-							<p class="w-full text-center text-xs text-[#64748B] self-center">Belum ada aktivitas presensi hari ini</p>
-						{/if}
+					<div class="overflow-x-auto pb-2">
+						<div class="flex items-end justify-start sm:justify-around gap-4 sm:gap-2 h-52 pt-4 pb-2 border-b border-[#E5E7EB] dark:border-slate-800 min-w-max sm:min-w-full px-2 sm:px-0">
+							{#each Object.entries(stats.perJam) as [jam, count]}
+								<div class="flex flex-col items-center flex-1 min-w-[48px]">
+									<span class="text-[11px] font-bold text-[#0F172A] dark:text-white mb-1.5">{count > 0 ? count : ''}</span>
+									<div
+										class="w-full max-w-[32px] rounded-t-lg bg-gradient-to-t from-[#2563EB] to-[#60A5FA] transition-all duration-300"
+										style="height: {Math.max((count / Math.max(1, ...Object.values(stats.perJam))) * 140, 6)}px;"
+									></div>
+									<span class="mt-2.5 text-[10px] font-semibold text-[#64748B]">{jam}</span>
+								</div>
+							{/each}
+							{#if Object.keys(stats.perJam).length === 0}
+								<p class="w-full text-center text-xs text-[#64748B] self-center">Belum ada aktivitas presensi hari ini</p>
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
