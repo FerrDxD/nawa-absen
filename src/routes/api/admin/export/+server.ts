@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { getRekapAbsensi } from '$lib/server/service';
+import { getRekapAbsensi, getTodayDateStrWIB } from '$lib/server/service';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const gugusIdParam = url.searchParams.get('gugusId');
@@ -54,7 +54,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		status: 200,
 		headers: {
 			'Content-Type': 'text/csv; charset=utf-8',
-			'Content-Disposition': `attachment; filename="Rekap_Absensi_MPLS_SMAN2Jonggol_${new Date().toISOString().split('T')[0]}.csv"`
+			'Content-Disposition': `attachment; filename="Rekap_Absensi_MPLS_SMAN2Jonggol_${getTodayDateStrWIB()}.csv"`
 		}
 	});
 };

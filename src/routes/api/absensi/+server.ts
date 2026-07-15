@@ -4,7 +4,8 @@ import {
 	checkDuplicateSubmission,
 	handlePhotoStorage,
 	saveAbsensiRecord,
-	getDynamicSchoolConfig
+	getDynamicSchoolConfig,
+	getTodayDateStrWIB
 } from '$lib/server/service';
 import { validateGeofenceServerSide } from '$lib/server/geo';
 
@@ -86,7 +87,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// 4. ANTI TITIP ABSEN / DUPLICATE PREVENTION
-		const todayStr = new Date().toISOString().split('T')[0];
+		const todayStr = getTodayDateStrWIB();
 		const isDuplicate = await checkDuplicateSubmission(
 			nama.trim(),
 			gugusIdNum,

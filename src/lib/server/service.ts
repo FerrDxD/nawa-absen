@@ -176,7 +176,7 @@ let memoryAbsensi: AbsensiRecord[] = [
 		accuracy_meter: 6.5,
 		status: 'valid',
 		keterangan: 'Lokasi valid dalam radius absensi SMAN 2 Jonggol.',
-		tanggal: new Date().toISOString().split('T')[0], // Hari Ini
+		tanggal: getTodayDateStrWIB(), // Hari Ini
 		user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6)',
 		device_info: 'iOS 16.6 - 375x812',
 		created_at: new Date()
@@ -216,6 +216,23 @@ export async function getGugusList(): Promise<GugusItem[]> {
 		}
 	}
 	return memoryGugus;
+}
+
+/**
+ * Dapatkan string tanggal hari ini (YYYY-MM-DD) sesuai zona waktu WIB (Asia/Jakarta)
+ */
+export function getTodayDateStrWIB(date: Date = new Date()): string {
+	const parts = new Intl.DateTimeFormat('id-ID', {
+		timeZone: 'Asia/Jakarta',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit'
+	}).formatToParts(date);
+
+	const year = parts.find((p) => p.type === 'year')?.value || '2026';
+	const month = parts.find((p) => p.type === 'month')?.value || '01';
+	const day = parts.find((p) => p.type === 'day')?.value || '01';
+	return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 /**
@@ -309,7 +326,7 @@ export async function handlePhotoStorage(
 	const gugusId = typeof optionsOrNama === 'string' ? undefined : optionsOrNama.gugusId;
 	const tanggal = typeof optionsOrNama === 'string' ? undefined : optionsOrNama.tanggal;
 
-	const dateStr = tanggal || new Date().toISOString().split('T')[0];
+	const dateStr = tanggal || getTodayDateStrWIB();
 	const gugusFolder = gugusId ? `gugus-${gugusId}` : 'gugus-umum';
 	const slugNama = slugifyName(nama);
 	const timestamp = Date.now();
