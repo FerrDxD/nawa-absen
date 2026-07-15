@@ -318,6 +318,7 @@ export const PESERTA_MPLS_2026: PesertaMPLS[] = [
 	{ nisn: "97979985", nama: "FAHMI DARMAWAN DISASTRA", gugus_id: 8, lp: "L", sekolah_asal: "SMP NEGERI 2 JONGGOL", jalur: "Prestasi - Non Akd - Kejuaraan" },
 	{ nisn: "107234095", nama: "FATIYAH FADILLAH ADHA", gugus_id: 8, lp: "P", sekolah_asal: "SMP NEGERI 1 JONGGOL", jalur: "Domisili" },
 	{ nisn: "114086616", nama: "HIDAYAT NURFALLAH", gugus_id: 8, lp: "L", sekolah_asal: "SMP NEGERI 1 JONGGOL", jalur: "Domisili" },
+	{ nisn: "-", nama: "HILMI RAYYAN ASYRAFI", gugus_id: 8, lp: "L", sekolah_asal: "SMPS HANGTUAH 6", jalur: "-" },
 	{ nisn: "3103784993", nama: "IRNA SITI MELANI", gugus_id: 8, lp: "P", sekolah_asal: "SMP PLUS NURUL HIKMAH AL HAKIM", jalur: "Prestasi - Non Akd - Kejuaraan" },
 	{ nisn: "3105722690", nama: "IRWAN AGUSTIN", gugus_id: 8, lp: "L", sekolah_asal: "SMP NEGERI 3 JONGGOL", jalur: "AFIRMASI-KETM" },
 	{ nisn: "111214977", nama: "ISTIQOMAH", gugus_id: 8, lp: "P", sekolah_asal: "SMP AR-RAHMAH JONGGOL", jalur: "AFIRMASI-KETM" },

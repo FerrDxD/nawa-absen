@@ -38,6 +38,8 @@
 	// --- 2 Mode Verifikasi Wajah & Timer 5 Detik ---
 	let captureMode = $state<'auto' | 'manual'>('auto');
 	let showManualPromptModal = $state(false);
+	let showNoFaceManualModal = $state(false);
+	let isVerifyingFace = $state(false);
 	let manualPromptTimer: any = null;
 
 	function startManualPromptTimer() {
@@ -60,6 +62,8 @@
 
 	function switchToManualMode() {
 		showManualPromptModal = false;
+		showNoFaceManualModal = false;
+		isVerifyingFace = false;
 		clearManualPromptTimer();
 		captureMode = 'manual';
 		stopFaceDetection();
@@ -67,6 +71,8 @@
 
 	function switchToAutoMode() {
 		showManualPromptModal = false;
+		showNoFaceManualModal = false;
+		isVerifyingFace = false;
 		captureMode = 'auto';
 		if (isCameraActive && !capturedPhotoBase64 && videoElement) {
 			startFaceDetectionLoop();
@@ -76,6 +82,8 @@
 
 	function retryAutoMode() {
 		showManualPromptModal = false;
+		showNoFaceManualModal = false;
+		isVerifyingFace = false;
 		if (isCameraActive && !capturedPhotoBase64 && videoElement) {
 			startFaceDetectionLoop();
 			startManualPromptTimer();
@@ -87,6 +95,8 @@
 		isLoadingCamera = true;
 		cameraError = null;
 		isPermissionDenied = false;
+		showNoFaceManualModal = false;
+		isVerifyingFace = false;
 
 		stopFaceDetection();
 		clearManualPromptTimer();
@@ -138,6 +148,8 @@
 	}
 
 	function stopCamera() {
+		showNoFaceManualModal = false;
+		isVerifyingFace = false;
 		stopFaceDetection();
 		clearManualPromptTimer();
 		if (stream) {
@@ -150,6 +162,17 @@
 	async function detectFaceReal(video: HTMLVideoElement): Promise<boolean> {
 		if (video.readyState < 2) return false;
 
+		if (!faceDetector && typeof window !== 'undefined' && 'FaceDetector' in window) {
+			try {
+				faceDetector = new (window as any).FaceDetector({
+					maxDetectedFaces: 1,
+					fastMode: true
+				});
+			} catch (e) {
+				faceDetector = null;
+			}
+		}
+
 		if (faceDetector) {
 			try {
 				const faces = await faceDetector.detect(video);
@@ -159,13 +182,18 @@
 					const vidH = video.videoHeight || (isLowEnd ? 240 : 480);
 					const centerX = face.x + face.width / 2;
 					const centerY = face.y + face.height / 2;
-					const isCentered =
-						centerX > vidW * 0.2 &&
-						centerX < vidW * 0.8 &&
-						centerY > vidH * 0.15 &&
-						centerY < vidH * 0.85;
 					const ratioW = face.width / vidW;
-					return isCentered && ratioW >= 0.18 && ratioW <= 0.85;
+
+					if (captureMode === 'manual') {
+						return ratioW >= 0.12 && ratioW <= 0.92 && centerX > vidW * 0.08 && centerX < vidW * 0.92;
+					} else {
+						const isCentered =
+							centerX > vidW * 0.2 &&
+							centerX < vidW * 0.8 &&
+							centerY > vidH * 0.15 &&
+							centerY < vidH * 0.85;
+						return isCentered && ratioW >= 0.18 && ratioW <= 0.85;
+					}
 				}
 				return false;
 			} catch (e) {}
@@ -218,7 +246,11 @@
 		}
 		const variance = varianceSum / totalPixels;
 
-		return skinRatio >= 0.25 && skinRatio <= 0.85 && variance > 75;
+		if (captureMode === 'manual') {
+			return skinRatio >= 0.18 && skinRatio <= 0.90 && variance > 50;
+		} else {
+			return skinRatio >= 0.25 && skinRatio <= 0.85 && variance > 75;
+		}
 	}
 
 	function startFaceDetectionLoop() {
@@ -296,12 +328,24 @@
 		consecutiveFaceFrames = 0;
 	}
 
-	function takeSnapshot() {
-		if (!videoElement || !canvasElement || !isCameraActive) return;
+	async function takeSnapshot() {
+		if (!videoElement || !canvasElement || !isCameraActive || isVerifyingFace) return;
+
+		if (captureMode === 'manual') {
+			isVerifyingFace = true;
+			const isFacePresent = await detectFaceReal(videoElement);
+			isVerifyingFace = false;
+
+			if (!isFacePresent) {
+				showNoFaceManualModal = true;
+				return;
+			}
+		}
 
 		stopFaceDetection();
 		clearManualPromptTimer();
 		showManualPromptModal = false;
+		showNoFaceManualModal = false;
 
 		const videoWidth = videoElement.videoWidth || (isLowEnd ? 320 : 640);
 		const videoHeight = videoElement.videoHeight || (isLowEnd ? 240 : 480);
@@ -333,6 +377,8 @@
 
 	async function retakePhoto() {
 		capturedPhotoBase64 = null;
+		showNoFaceManualModal = false;
+		isVerifyingFace = false;
 		onPhotoTaken('');
 		await tick();
 		const tracksActive = stream && stream.getVideoTracks().some((t) => t.readyState === 'live');
@@ -465,6 +511,34 @@
 			</div>
 		{/if}
 
+		<!-- Pop up Overlay: Wajah Ditolak di Mode Manual -->
+		{#if showNoFaceManualModal && !capturedPhotoBase64}
+			<div class="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4 transition-all">
+				<div class="w-full max-w-xs sm:max-w-sm rounded-[22px] border border-red-500/30 bg-slate-900 p-5 text-center shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95">
+					<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/20 text-red-400">
+						<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+							<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+						</svg>
+					</div>
+					<div>
+						<h4 class="font-heading text-base font-bold text-white">Wajah Tidak Terdeteksi</h4>
+						<p class="text-xs text-slate-300 mt-1 leading-relaxed">
+							Foto ditolak karena sistem tidak mendeteksi adanya wajah di dalam bingkai kamera (misal hanya pemandangan atau terlalu gelap).
+						</p>
+					</div>
+					<div class="flex flex-col gap-2 pt-1">
+						<button
+							type="button"
+							onclick={() => showNoFaceManualModal = false}
+							class="w-full rounded-[14px] bg-[#2563EB] hover:bg-[#1D4ED8] py-2.5 text-xs font-bold text-white shadow-md transition"
+						>
+							📸 Posisikan Wajah & Foto Ulang
+						</button>
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Empty state -->
 		{#if !capturedPhotoBase64 && !isCameraActive}
 			<div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 p-8 text-center">
@@ -497,13 +571,22 @@
 			<button
 				type="button"
 				onclick={takeSnapshot}
-				class="w-full rounded-[18px] bg-[#2563EB] hover:bg-[#1D4ED8] py-3.5 text-sm font-bold text-white shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 min-h-[48px]"
+				disabled={isVerifyingFace}
+				class="w-full rounded-[18px] bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-75 py-3.5 text-sm font-bold text-white shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 min-h-[48px]"
 			>
-				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-					<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-					<circle cx="12" cy="13" r="4"/>
-				</svg>
-				Ambil Foto Sekarang (Mode Manual)
+				{#if isVerifyingFace}
+					<svg class="h-5 w-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					</svg>
+					<span>Memverifikasi Wajah dalam Foto...</span>
+				{:else}
+					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+						<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+						<circle cx="12" cy="13" r="4"/>
+					</svg>
+					<span>Ambil Foto Sekarang (Mode Manual)</span>
+				{/if}
 			</button>
 		</div>
 	{/if}
