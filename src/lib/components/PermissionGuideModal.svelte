@@ -43,12 +43,21 @@
 		currentStep = 'camera';
 	});
 
+	const isInAppBrowser =
+		typeof window !== 'undefined' &&
+		/FBAN|FBAV|Instagram|WhatsApp|Line|TikTok|MicroMessenger/i.test(navigator.userAgent);
+
 	async function handleGrantCamera() {
 		isRequesting = true;
 		errorMsg = null;
 
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+			let stream: MediaStream;
+			try {
+				stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+			} catch (fallbackErr: any) {
+				stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+			}
 			stream.getTracks().forEach((t) => t.stop());
 			cameraGranted = true;
 			isRequesting = false;
@@ -56,11 +65,14 @@
 			currentStep = 'location';
 		} catch (err: any) {
 			isRequesting = false;
-			if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-				errorMsg =
-					'Izin kamera ditolak. Klik ikon 🔒 di bilah URL browser, aktifkan Kamera, lalu muat ulang halaman.';
+			if (
+				err.name === 'NotAllowedError' ||
+				err.name === 'PermissionDeniedError' ||
+				err.message?.includes('Permission denied')
+			) {
+				errorMsg = 'denied_camera';
 			} else {
-				errorMsg = 'Tidak bisa mengakses kamera. Pastikan kamera perangkat Anda berfungsi.';
+				errorMsg = `Tidak bisa mengakses kamera: ${err.message || 'Pastikan kamera perangkat Anda berfungsi dan tidak sedang dipakai aplikasi lain.'}`;
 			}
 		}
 	}
@@ -69,30 +81,51 @@
 		isRequesting = true;
 		errorMsg = null;
 
-		const locationGranted = await new Promise<boolean>((resolve) => {
+		// Cek terlebih dahulu via Permissions API jika tersedia
+		if (navigator.permissions && navigator.permissions.query) {
+			try {
+				const geoPerm = await navigator.permissions.query({ name: 'geolocation' });
+				if (geoPerm.state === 'granted') {
+					try {
+						localStorage.setItem('nawa_absen_permissions_granted', 'true');
+					} catch (e) {}
+					isDone = true;
+					isRequesting = false;
+					await new Promise((r) => setTimeout(r, 600));
+					currentStep = 'closed';
+					onPermissionGranted();
+					return;
+				}
+			} catch (e) {}
+		}
+
+		const result = await new Promise<{ granted: boolean; code?: number }>((resolve) => {
 			navigator.geolocation.getCurrentPosition(
-				() => resolve(true),
-				() => resolve(false),
-				{ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+				() => resolve({ granted: true }),
+				(err) => resolve({ granted: false, code: err.code }),
+				{ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
 			);
 		});
 
-		if (!locationGranted) {
+		// Jika error karena TIMEOUT (code 3) atau POSITION_UNAVAILABLE (code 2),
+		// ITU BERARTI IZIN SUDAH DIBERIKAN oleh user di browser! Sinyal satelit GPS saja yang sedang dicari/lemah.
+		// Jangan tolak modal! Izinkan lanjut agar GeoStatus.svelte yang menangani pencarian koordinatnya.
+		if (result.granted || (result.code !== 1 && result.code !== undefined)) {
+			try {
+				localStorage.setItem('nawa_absen_permissions_granted', 'true');
+			} catch (e) {}
+
+			isDone = true;
 			isRequesting = false;
-			errorMsg =
-				'Izin lokasi ditolak. Klik ikon 🔒 di bilah URL browser, aktifkan Lokasi, lalu muat ulang halaman.';
+			await new Promise((r) => setTimeout(r, 600));
+			currentStep = 'closed';
+			onPermissionGranted();
 			return;
 		}
 
-		try {
-			localStorage.setItem('nawa_absen_permissions_granted', 'true');
-		} catch (e) {}
-
-		isDone = true;
+		// Jika code === 1 (PERMISSION_DENIED), berarti izin benar-benar diblokir/ditolak
 		isRequesting = false;
-		await new Promise((r) => setTimeout(r, 700));
-		currentStep = 'closed';
-		onPermissionGranted();
+		errorMsg = 'denied_location';
 	}
 
 	let isOpen = $derived(currentStep !== 'closed');
@@ -209,7 +242,53 @@
 					</div>
 
 					<!-- Error -->
-					{#if errorMsg}
+					{#if errorMsg === 'denied_camera'}
+						<div class="rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 p-4 text-left space-y-3 animate-fadeIn">
+							<div class="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs">
+								<svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+								</svg>
+								<span>Izin Kamera Terblokir di Browser</span>
+							</div>
+
+							{#if isInAppBrowser}
+								<div class="rounded-xl bg-amber-100 dark:bg-amber-900/60 p-3 text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+									<strong>⚠️ Peringatan Aplikasi Chat:</strong> Anda membuka tautan ini di dalam aplikasi (WhatsApp/Instagram) yang sering memblokir izin kamera & lokasi secara permanen.
+									<br/><strong>Solusi:</strong> Klik titik tiga (⋮) di kanan atas, pilih <strong>"Buka di Chrome" / "Open in Chrome"</strong>, atau salin link di bawah ke browser utama.
+								</div>
+								<button
+									type="button"
+									onclick={() => {
+										navigator.clipboard.writeText(window.location.href);
+										alert('Tautan berhasil disalin! Silakan buka Google Chrome dan tempel tautan ini.');
+									}}
+									class="w-full rounded-xl bg-amber-600 hover:bg-amber-700 py-2.5 text-xs font-bold text-white shadow-sm transition"
+								>
+									📋 Salin Tautan Absensi
+								</button>
+							{:else}
+								<div class="space-y-2 text-[11px] text-[#0F172A] dark:text-slate-200 leading-relaxed">
+									<p class="font-semibold text-rose-800 dark:text-rose-300">Cara Membuka Blokir di Google Chrome / Android:</p>
+									<ol class="list-decimal list-inside space-y-1 pl-1 text-[#64748B] dark:text-slate-300">
+										<li>Klik ikon <strong>🔒 (Gembok) / Ikon Pengaturan</strong> di pojok kiri atas bilah alamat web (di samping link URL).</li>
+										<li>Pilih menu <strong>Izin (Permissions)</strong> atau <strong>Setelan Situs (Site settings)</strong>.</li>
+										<li>Cari opsi <strong>Kamera (Camera)</strong>, lalu ubah dari <em>Blokir (Block)</em> menjadi <strong>Izinkan (Allow)</strong>.</li>
+										<li>Setelah diizinkan, klik tombol <strong>Muat Ulang Halaman</strong> di bawah ini.</li>
+									</ol>
+								</div>
+								<button
+									type="button"
+									onclick={() => window.location.reload()}
+									class="w-full rounded-xl bg-rose-600 hover:bg-rose-700 py-2.5 text-xs font-bold text-white shadow-sm transition flex items-center justify-center gap-2"
+								>
+									<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+										<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+									</svg>
+									Muat Ulang Halaman (Reload)
+								</button>
+							{/if}
+						</div>
+					{:else if errorMsg}
 						<div class="flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800/70 p-4">
 							<svg class="h-5 w-5 shrink-0 text-red-500 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 								<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -361,7 +440,53 @@
 					</div>
 
 					<!-- Error -->
-					{#if errorMsg}
+					{#if errorMsg === 'denied_location'}
+						<div class="rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 p-4 text-left space-y-3 animate-fadeIn">
+							<div class="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs">
+								<svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+								</svg>
+								<span>Izin Lokasi GPS Terblokir di Browser</span>
+							</div>
+
+							{#if isInAppBrowser}
+								<div class="rounded-xl bg-amber-100 dark:bg-amber-900/60 p-3 text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+									<strong>⚠️ Peringatan Aplikasi Chat:</strong> Anda membuka tautan ini di dalam aplikasi (WhatsApp/Instagram) yang sering memblokir izin kamera & lokasi secara permanen.
+									<br/><strong>Solusi:</strong> Klik titik tiga (⋮) di kanan atas, pilih <strong>"Buka di Chrome" / "Open in Chrome"</strong>, atau salin link di bawah ke browser utama.
+								</div>
+								<button
+									type="button"
+									onclick={() => {
+										navigator.clipboard.writeText(window.location.href);
+										alert('Tautan berhasil disalin! Silakan buka Google Chrome dan tempel tautan ini.');
+									}}
+									class="w-full rounded-xl bg-amber-600 hover:bg-amber-700 py-2.5 text-xs font-bold text-white shadow-sm transition"
+								>
+									📋 Salin Tautan Absensi
+								</button>
+							{:else}
+								<div class="space-y-2 text-[11px] text-[#0F172A] dark:text-slate-200 leading-relaxed">
+									<p class="font-semibold text-rose-800 dark:text-rose-300">Cara Membuka Blokir di Google Chrome / Android:</p>
+									<ol class="list-decimal list-inside space-y-1 pl-1 text-[#64748B] dark:text-slate-300">
+										<li>Klik ikon <strong>🔒 (Gembok) / Ikon Pengaturan</strong> di pojok kiri atas bilah alamat web (di samping link URL).</li>
+										<li>Pilih menu <strong>Izin (Permissions)</strong> atau <strong>Setelan Situs (Site settings)</strong>.</li>
+										<li>Cari opsi <strong>Lokasi (Location)</strong>, lalu ubah dari <em>Blokir (Block)</em> menjadi <strong>Izinkan (Allow)</strong>.</li>
+										<li>Setelah diizinkan, klik tombol <strong>Muat Ulang Halaman</strong> di bawah ini.</li>
+									</ol>
+								</div>
+								<button
+									type="button"
+									onclick={() => window.location.reload()}
+									class="w-full rounded-xl bg-rose-600 hover:bg-rose-700 py-2.5 text-xs font-bold text-white shadow-sm transition flex items-center justify-center gap-2"
+								>
+									<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+										<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+									</svg>
+									Muat Ulang Halaman (Reload)
+								</button>
+							{/if}
+						</div>
+					{:else if errorMsg}
 						<div class="flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800/70 p-4">
 							<svg class="h-5 w-5 shrink-0 text-red-500 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 								<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>

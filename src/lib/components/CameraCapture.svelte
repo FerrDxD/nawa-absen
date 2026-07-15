@@ -35,6 +35,53 @@
 	let countdownTimer: any = null;
 	let consecutiveFaceFrames = 0;
 
+	// --- 2 Mode Verifikasi Wajah & Timer 10 Detik ---
+	let captureMode = $state<'auto' | 'manual'>('auto');
+	let showManualPromptModal = $state(false);
+	let manualPromptTimer: any = null;
+
+	function startManualPromptTimer() {
+		clearManualPromptTimer();
+		if (captureMode === 'auto' && !capturedPhotoBase64) {
+			manualPromptTimer = setTimeout(() => {
+				if (isCameraActive && !capturedPhotoBase64 && captureMode === 'auto') {
+					showManualPromptModal = true;
+				}
+			}, 10000); // 10 detik tanpa deteksi wajah otomatis -> munculkan pop up
+		}
+	}
+
+	function clearManualPromptTimer() {
+		if (manualPromptTimer) {
+			clearTimeout(manualPromptTimer);
+			manualPromptTimer = null;
+		}
+	}
+
+	function switchToManualMode() {
+		showManualPromptModal = false;
+		clearManualPromptTimer();
+		captureMode = 'manual';
+		stopFaceDetection();
+	}
+
+	function switchToAutoMode() {
+		showManualPromptModal = false;
+		captureMode = 'auto';
+		if (isCameraActive && !capturedPhotoBase64 && videoElement) {
+			startFaceDetectionLoop();
+			startManualPromptTimer();
+		}
+	}
+
+	function retryAutoMode() {
+		showManualPromptModal = false;
+		if (isCameraActive && !capturedPhotoBase64 && videoElement) {
+			startFaceDetectionLoop();
+			startManualPromptTimer();
+		}
+	}
+
 	async function startCamera() {
 		if (isLoadingCamera) return;
 		isLoadingCamera = true;
@@ -42,6 +89,7 @@
 		isPermissionDenied = false;
 
 		stopFaceDetection();
+		clearManualPromptTimer();
 		if (stream) {
 			stream.getTracks().forEach((track) => track.stop());
 			stream = null;
@@ -65,7 +113,10 @@
 			if (videoElement) {
 				videoElement.srcObject = mediaStream;
 				await videoElement.play().catch(() => {});
-				startFaceDetectionLoop();
+				if (captureMode === 'auto') {
+					startFaceDetectionLoop();
+					startManualPromptTimer();
+				}
 			}
 		} catch (err: any) {
 			console.error('Kamera ditolak atau gagal:', err);
@@ -88,6 +139,7 @@
 
 	function stopCamera() {
 		stopFaceDetection();
+		clearManualPromptTimer();
 		if (stream) {
 			stream.getTracks().forEach((track) => track.stop());
 			stream = null;
@@ -171,6 +223,7 @@
 
 	function startFaceDetectionLoop() {
 		stopFaceDetection();
+		if (captureMode === 'manual') return;
 		faceStatus = 'searching';
 		autoCaptureCountdown = null;
 		consecutiveFaceFrames = 0;
@@ -190,7 +243,7 @@
 		const intervalMs = isLowEnd ? 600 : 350;
 
 		detectInterval = setInterval(async () => {
-			if (!videoElement || !isCameraActive || capturedPhotoBase64) return;
+			if (!videoElement || !isCameraActive || capturedPhotoBase64 || captureMode === 'manual') return;
 
 			const isFacePresent = await detectFaceReal(videoElement);
 
@@ -198,6 +251,7 @@
 				consecutiveFaceFrames++;
 				if (consecutiveFaceFrames >= 3 && faceStatus === 'searching') {
 					faceStatus = 'detected';
+					clearManualPromptTimer(); // Wajah ketemu, batalkan timer pop up manual
 					startAutoCaptureCountdown();
 				}
 			} else {
@@ -246,6 +300,8 @@
 		if (!videoElement || !canvasElement || !isCameraActive) return;
 
 		stopFaceDetection();
+		clearManualPromptTimer();
+		showManualPromptModal = false;
 
 		const videoWidth = videoElement.videoWidth || (isLowEnd ? 320 : 640);
 		const videoHeight = videoElement.videoHeight || (isLowEnd ? 240 : 480);
@@ -285,7 +341,10 @@
 		} else if (videoElement) {
 			videoElement.srcObject = stream;
 			await videoElement.play().catch(() => {});
-			startFaceDetectionLoop();
+			if (captureMode === 'auto') {
+				startFaceDetectionLoop();
+				startManualPromptTimer();
+			}
 		}
 	}
 
@@ -301,29 +360,51 @@
 	});
 </script>
 
-<div class="rounded-[24px] border border-[#E5E7EB] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-v2 card-hover">
-	<div class="mb-5 flex items-center justify-between">
+<div class="rounded-[24px] border border-[#E5E7EB] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-v2 card-hover relative">
+	<div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 		<div class="flex items-center gap-3">
-			<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EFF6FF] dark:bg-blue-950 text-[#2563EB] dark:text-blue-400">
+			<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EFF6FF] dark:bg-blue-950 text-[#2563EB] dark:text-blue-400">
 				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
 					<circle cx="12" cy="13" r="3"/>
 				</svg>
 			</div>
 			<div>
-				<h3 class="font-heading text-base font-bold text-[#0F172A] dark:text-white">
-					Verifikasi Wajah Otomatis
+				<h3 class="font-heading text-base font-bold text-[#0F172A] dark:text-white flex items-center gap-2">
+					<span>Verifikasi Wajah ({captureMode === 'auto' ? 'Otomatis' : 'Manual'})</span>
 				</h3>
 				<p class="text-xs text-[#64748B] dark:text-slate-400">
-					Sistem mendeteksi dan mengambil foto secara otomatis
+					{captureMode === 'auto' ? 'Sistem memotret otomatis saat wajah terdeteksi' : 'Posisikan wajah lalu klik tombol foto di bawah'}
 				</p>
 			</div>
 		</div>
 
-		<!-- Status Kamera Pill -->
-		<div class="rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors {faceStatus === 'capturing' || faceStatus === 'detected' || capturedPhotoBase64 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#10B981] border border-emerald-200 dark:border-emerald-800/60' : 'bg-slate-100 dark:bg-slate-800 text-[#64748B] dark:text-slate-400'}">
-			<span class="h-2 w-2 rounded-full {faceStatus === 'capturing' || faceStatus === 'detected' || capturedPhotoBase64 ? 'bg-[#10B981] animate-pulse' : 'bg-[#64748B]'}"></span>
-			<span>{capturedPhotoBase64 ? 'Foto Tersimpan' : faceStatus === 'capturing' || faceStatus === 'detected' ? 'Wajah Terdeteksi' : 'Menunggu Wajah'}</span>
+		<div class="flex items-center gap-2 self-end sm:self-auto">
+			<!-- Mode Switcher Tabs -->
+			{#if !capturedPhotoBase64 && isCameraActive}
+				<div class="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-[#E5E7EB] dark:border-slate-700">
+					<button
+						type="button"
+						onclick={switchToAutoMode}
+						class="rounded-lg px-2.5 py-1 text-[11px] font-bold transition {captureMode === 'auto' ? 'bg-white dark:bg-slate-900 text-[#2563EB] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A] dark:hover:text-white'}"
+					>
+						⚡ Otomatis
+					</button>
+					<button
+						type="button"
+						onclick={switchToManualMode}
+						class="rounded-lg px-2.5 py-1 text-[11px] font-bold transition {captureMode === 'manual' ? 'bg-white dark:bg-slate-900 text-[#2563EB] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A] dark:hover:text-white'}"
+					>
+						📸 Manual
+					</button>
+				</div>
+			{/if}
+
+			<!-- Status Kamera Pill -->
+			<div class="rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors {captureMode === 'manual' && !capturedPhotoBase64 ? 'bg-blue-50 dark:bg-blue-950/60 text-[#2563EB] border border-blue-200 dark:border-blue-800/60' : faceStatus === 'capturing' || faceStatus === 'detected' || capturedPhotoBase64 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#10B981] border border-emerald-200 dark:border-emerald-800/60' : 'bg-slate-100 dark:bg-slate-800 text-[#64748B] dark:text-slate-400'}">
+				<span class="h-2 w-2 rounded-full {captureMode === 'manual' && !capturedPhotoBase64 ? 'bg-[#2563EB]' : faceStatus === 'capturing' || faceStatus === 'detected' || capturedPhotoBase64 ? 'bg-[#10B981] animate-pulse' : 'bg-[#64748B]'}"></span>
+				<span>{capturedPhotoBase64 ? 'Foto Tersimpan' : captureMode === 'manual' ? 'Mode Manual' : faceStatus === 'capturing' || faceStatus === 'detected' ? 'Wajah Terdeteksi' : 'Menunggu Wajah'}</span>
+			</div>
 		</div>
 	</div>
 
@@ -331,7 +412,7 @@
 	<canvas bind:this={canvasElement} class="hidden"></canvas>
 
 	<!-- Viewport Kamera Utama -->
-	<div class="relative overflow-hidden rounded-[20px] bg-slate-950 aspect-[4/5] sm:aspect-video flex items-center justify-center border-2 transition-all duration-300 {faceStatus === 'capturing' || faceStatus === 'detected' ? 'border-[#10B981] shadow-[0_0_25px_rgba(16,185,129,0.3)]' : 'border-slate-800'}">
+	<div class="relative overflow-hidden rounded-[20px] bg-slate-950 aspect-[4/5] sm:aspect-video flex items-center justify-center border-2 transition-all duration-300 {faceStatus === 'capturing' || faceStatus === 'detected' ? 'border-[#10B981] shadow-[0_0_25px_rgba(16,185,129,0.3)]' : captureMode === 'manual' && !capturedPhotoBase64 ? 'border-[#2563EB]' : 'border-slate-800'}">
 		{#if capturedPhotoBase64}
 			<img
 				src={capturedPhotoBase64}
@@ -354,13 +435,52 @@
 
 			<!-- Oval Guide -->
 			<div class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-				<div class="relative w-56 h-64 sm:w-64 sm:h-72 rounded-[50%] border-2 transition-all duration-300 flex items-center justify-center {faceStatus === 'capturing' || faceStatus === 'detected' ? 'border-[#10B981] scale-105' : 'border-white/40 border-dashed'}">
-					{#if autoCaptureCountdown !== null}
+				<div class="relative w-56 h-64 sm:w-64 sm:h-72 rounded-[50%] border-2 transition-all duration-300 flex items-center justify-center {faceStatus === 'capturing' || faceStatus === 'detected' ? 'border-[#10B981] scale-105' : captureMode === 'manual' ? 'border-[#2563EB]/60 border-dashed' : 'border-white/40 border-dashed'}">
+					{#if autoCaptureCountdown !== null && captureMode === 'auto'}
 						<div class="flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-md rounded-2xl px-6 py-3.5 border border-[#10B981]">
 							<span class="font-heading text-3xl font-bold text-[#10B981]">{autoCaptureCountdown}</span>
 							<span class="text-[11px] font-semibold text-white uppercase mt-0.5">Memotret Otomatis</span>
 						</div>
+					{:else if captureMode === 'manual'}
+						<div class="absolute bottom-4 rounded-full bg-slate-900/80 px-3 py-1 text-[11px] text-white/80 backdrop-blur-sm border border-white/10">
+							Posisikan wajah di dalam bingkai
+						</div>
 					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Pop up Overlay: 10 Detik Tidak Ada Wajah Terdeteksi -->
+		{#if showManualPromptModal && !capturedPhotoBase64}
+			<div class="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4 transition-all">
+				<div class="w-full max-w-xs sm:max-w-sm rounded-[22px] border border-slate-700 bg-slate-900 p-5 text-center shadow-2xl space-y-3.5">
+					<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400">
+						<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+							<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+						</svg>
+					</div>
+					<div>
+						<h4 class="font-heading text-base font-bold text-white">Tidak Ada Wajah yang Terdeteksi</h4>
+						<p class="text-xs text-slate-300 mt-1 leading-relaxed">
+							Sistem kesulitan mengenali wajah Anda secara otomatis (pencahayaan/sudut kamera). Foto manual?
+						</p>
+					</div>
+					<div class="flex flex-col gap-2 pt-1">
+						<button
+							type="button"
+							onclick={switchToManualMode}
+							class="w-full rounded-[14px] bg-[#2563EB] hover:bg-[#1D4ED8] py-2.5 text-xs font-bold text-white shadow-md transition"
+						>
+							Ya, Foto Manual
+						</button>
+						<button
+							type="button"
+							onclick={retryAutoMode}
+							class="w-full rounded-[14px] border border-slate-700 bg-slate-800 hover:bg-slate-700 py-2 text-xs font-semibold text-slate-300 transition"
+						>
+							Coba Otomatis Lagi
+						</button>
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -390,6 +510,23 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Tombol Shutter Mode Manual -->
+	{#if captureMode === 'manual' && !capturedPhotoBase64 && isCameraActive}
+		<div class="mt-4">
+			<button
+				type="button"
+				onclick={takeSnapshot}
+				class="w-full rounded-[18px] bg-[#2563EB] hover:bg-[#1D4ED8] py-3.5 text-sm font-bold text-white shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 min-h-[48px]"
+			>
+				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+					<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+					<circle cx="12" cy="13" r="4"/>
+				</svg>
+				Ambil Foto Sekarang (Mode Manual)
+			</button>
+		</div>
+	{/if}
 
 	<!-- Tombol Ulangi Foto -->
 	{#if capturedPhotoBase64}

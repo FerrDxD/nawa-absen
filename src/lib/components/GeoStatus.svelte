@@ -48,9 +48,9 @@
 	let collectedSamples = $state<GeolocationPosition[]>([]);
 	let watchId: number | null = null;
 	let bestSample: GeolocationPosition | null = null;
-	const MAX_SAMPLES = 5;          // Kumpulkan hingga 5 pembacaan
-	const TARGET_ACCURACY_M = 30;   // Stop lebih awal jika sudah ≤30m (akurasi baik)
-	const MAX_WAIT_MS = 20000;      // Batas waktu total: 20 detik
+	const MAX_SAMPLES = 3;          // Kumpulkan maksimal 3 pembacaan (cepat)
+	const TARGET_ACCURACY_M = 65;   // Fast-track: langsung selesai jika ≤65m (sangat akurat untuk sekolah)
+	const MAX_WAIT_MS = 6000;       // Batas waktu total: 6 detik (cepat dan anti kepanikan)
 	let samplingTimeout: any = null;
 
 	function calcHaversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -149,7 +149,7 @@
 		locationError = null;
 		collectedSamples = [];
 		bestSample = null;
-		locatingLabel = 'Mengumpulkan sinyal GPS terbaik...';
+		locatingLabel = 'Mencari sinyal GPS...';
 
 		if (typeof navigator === 'undefined' || !navigator.geolocation) {
 			locationError = 'Browser Anda tidak mendukung fitur geolokasi GPS.';
@@ -158,22 +158,22 @@
 		}
 
 		// Gunakan watchPosition untuk mengumpulkan beberapa pembacaan GPS secara berurutan.
-		// maximumAge: 0 → selalu minta data segar, bukan cache.
-		// timeout per‑sample: 8 detik.
+		// maximumAge: 15000 → izinkan cache GPS 15 detik terakhir agar instan setelah modal izin ditutup.
+		// timeout per‑sample: 6 detik.
 		watchId = navigator.geolocation.watchPosition(
 			(pos) => {
 				collectedSamples.push(pos);
 
-				// Update label progres
+				// Update label progres (reassuring, no panic)
 				const sampleAcc = Math.round(pos.coords.accuracy);
-				locatingLabel = `Sampel ${collectedSamples.length}/${MAX_SAMPLES} · ±${sampleAcc}m`;
+				locatingLabel = `Sinyal GPS terdeteksi (±${sampleAcc}m)...`;
 
 				// Tentukan sampel terbaik saat ini
 				if (!bestSample || pos.coords.accuracy < bestSample.coords.accuracy) {
 					bestSample = pos;
 				}
 
-				// Hentikan lebih awal jika sudah cukup akurat atau sudah MAX_SAMPLES
+				// Fast-Track: Hentikan langsung jika sampel pertama/kapanpun sudah ≤65m, ATAU sudah terkumpul MAX_SAMPLES
 				const enoughSamples = collectedSamples.length >= MAX_SAMPLES;
 				const goodEnough = pos.coords.accuracy <= TARGET_ACCURACY_M;
 				if (enoughSamples || goodEnough) {
@@ -187,29 +187,43 @@
 					const resolved = resolveBestPosition(collectedSamples);
 					commitPosition(resolved);
 				} else {
-					stopWatching();
-					isLocating = false;
-					locationError = 'Gagal mengakses lokasi GPS. Pastikan fitur lokasi diaktifkan dan izin diberikan.';
+					// Fallback cepat via getCurrentPosition jika watchPosition gagal langsung
+					navigator.geolocation.getCurrentPosition(
+						(pos) => commitPosition(pos),
+						() => {
+							stopWatching();
+							isLocating = false;
+							locationError = 'Gagal mengakses lokasi GPS. Pastikan fitur lokasi diaktifkan dan izin diberikan di browser Anda.';
+						},
+						{ enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+					);
 				}
 			},
 			{
 				enableHighAccuracy: true,
-				timeout: 8000,
-				maximumAge: 0 // Selalu segar — tidak boleh pakai cache untuk absensi
+				timeout: 6000,
+				maximumAge: 15000 // Izinkan cache 15 detik agar langsung instan setelah modal izin
 			}
 		);
 
-		// Batas waktu total: commit sampel terbaik yang ada meski belum ideal
+		// Batas waktu total 6 detik: commit sampel terbaik jika sudah ada, atau coba fallback
 		samplingTimeout = setTimeout(() => {
 			if (isLocating) {
 				if (bestSample) {
-					locatingLabel = 'Menggunakan pembacaan terbaik yang tersedia...';
+					locatingLabel = 'Menggunakan titik lokasi terbaik...';
 					const resolved = resolveBestPosition(collectedSamples);
 					commitPosition(resolved);
 				} else {
-					stopWatching();
-					isLocating = false;
-					locationError = 'Waktu habis. GPS tidak merespons. Pindah ke area dengan sinyal lebih baik.';
+					// Fallback cepat jika dalam 6 detik watchPosition belum mengembalikan sampel apa pun
+					navigator.geolocation.getCurrentPosition(
+						(pos) => commitPosition(pos),
+						() => {
+							stopWatching();
+							isLocating = false;
+							locationError = 'Sinyal GPS lemah di area tertutup. Silakan bergerak sedikit ke area terbuka/teras dan tekan Perbarui Lokasi.';
+						},
+						{ enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
+					);
 				}
 			}
 		}, MAX_WAIT_MS);
@@ -264,10 +278,10 @@
 			</div>
 			<!-- Progress bar animasi -->
 			<div class="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-				<div class="h-full rounded-full bg-[#2563EB] animate-pulse" style="width: {Math.min(collectedSamples.length / MAX_SAMPLES * 100, 95)}%"></div>
+				<div class="h-full rounded-full bg-[#2563EB] animate-pulse transition-all duration-500" style="width: {Math.max(40, Math.min(collectedSamples.length / MAX_SAMPLES * 100, 95))}%"></div>
 			</div>
 			<p class="text-[11px] text-[#64748B]">
-				Sistem mengumpulkan beberapa pembacaan GPS untuk presisi terbaik di dalam ruangan.
+				Sistem mendeteksi dan memverifikasi koordinat tercepat dengan presisi tinggi.
 			</p>
 		</div>
 	{:else if userLat !== null && distanceMeter !== null}
