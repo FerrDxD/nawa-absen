@@ -446,7 +446,7 @@
 									class="w-full rounded-[16px] border border-[#E5E7EB] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-950 px-4 py-3.5 text-sm font-semibold text-[#0F172A] dark:text-white focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 transition min-h-[50px] shadow-sm"
 								>
 									<option value="" disabled>-- Pilih Nama Kamu ({filteredPesertaList.length} Nama Tersedia) --</option>
-									{#each filteredPesertaList as peserta (peserta.nisn)}
+									{#each filteredPesertaList as peserta (peserta.nisn + '-' + peserta.nama)}
 										<option value={peserta.nama}>
 											{peserta.nama} — {peserta.sekolah_asal}
 										</option>

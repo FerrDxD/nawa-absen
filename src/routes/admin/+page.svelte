@@ -73,6 +73,14 @@
 		}
 	});
 
+	onMount(() => {
+		const token = sessionStorage.getItem('admin_token');
+		if (token === 'admin-session-mpls-2026') {
+			isAuthenticated = true;
+			loadAllData();
+		}
+	});
+
 	// Modal preview foto & detail
 	let previewModalRecord = $state<AbsensiRecord | null>(null);
 
@@ -95,6 +103,7 @@
 			});
 			const json = await res.json();
 			if (res.ok && json.success) {
+				sessionStorage.setItem('admin_token', json.token);
 				isAuthenticated = true;
 				passwordInput = '';
 				loadAllData();
@@ -109,6 +118,7 @@
 	}
 
 	function handleLogout() {
+		sessionStorage.removeItem('admin_token');
 		isAuthenticated = false;
 		records = [];
 	}
@@ -146,7 +156,7 @@
 		loadAllData();
 	}
 
-	function handleExportCSV() {
+	function handleExportExcel() {
 		const url = `/api/admin/export?gugusId=${filterGugus}&tanggal=${filterTanggal}`;
 		window.open(url, '_blank');
 	}
@@ -326,13 +336,13 @@
 
 					<button
 						type="button"
-						onclick={handleExportCSV}
+						onclick={handleExportExcel}
 						class="inline-flex items-center gap-1.5 rounded-[16px] bg-[#10B981] hover:bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white transition shadow-md shadow-emerald-600/25"
 					>
 						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
 						</svg>
-						<span>Unduh Laporan (CSV)</span>
+						<span>Unduh Laporan (Excel)</span>
 					</button>
 
 					<button
